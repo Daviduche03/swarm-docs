@@ -19,33 +19,62 @@ const docs = import.meta.glob("./docs/**/*.mdx", { eager: true }) as Record<
   { default: React.ComponentType }
 >;
 
+function prettify(s: string): string {
+  return s
+    .split(/[/_-]+/)
+    .filter(Boolean)
+    .map((w) => w.replace(/\b\w/g, (c) => c.toUpperCase()))
+    .join(" ")
+    .replace(/\b(Api|Sdk|Http|Json|Tts|Ai|Url|Id)\b/g, (m) => m.toUpperCase())
+    .replace(/\b(Typescript|Javascript)\b/g, (m) => (m === "Typescript" ? "TypeScript" : "JavaScript"));
+}
+
+const HOME = "__home__";
+
 type DocEntry = {
   slug: string;
   title: string;
+  group: string;
   Component: React.ComponentType;
 };
 
-const PRIMARY_SLUGS = ["index", "getting-started", "api-reference"];
-
+// Navigation is derived from the page tree: each top-level folder under
+// `src/docs/` is a section. `index.mdx` at the folder root is the section's
+// landing page; root `index.mdx` is Home.
 const docEntries: DocEntry[] = Object.entries(docs)
   .map(([filepath, mod]) => {
-    const slug = filepath.replace("./docs/", "").replace(/\.mdx$/, "");
-    const title = slug
-      .split("/")
-      .pop()!
-      .replace(/[-_]/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-      .replace(/\bApi\b/g, "API");
-    return { slug, title, Component: mod.default };
+    const rel = filepath.replace("./docs/", "").replace(/\.mdx$/, "");
+    const parts = rel.split("/");
+    const fileName = parts.pop()!;
+    const group = parts.length ? parts[0] : HOME;
+    const isIndex = fileName === "index";
+    const slug = isIndex ? (group === HOME ? "index" : group) : rel;
+    const title = slug === "index" ? "Home" : isIndex ? prettify(parts[parts.length - 1]!) : prettify(fileName);
+    return { slug, title, group, Component: mod.default };
   })
-  .sort((a, b) => {
-    const order: Record<string, number> = {
-      index: 0,
-      "getting-started": 1,
-      "api-reference": 2,
-    };
-    return (order[a.slug] ?? 99) - (order[b.slug] ?? 99);
-  });
+  .sort((a, b) => a.slug.localeCompare(b.slug));
+
+type Section = { key: string; title: string; landing: string };
+
+function landingFor(entries: DocEntry[], group: string): string {
+  return entries.find((e) => e.slug === group)?.slug ?? entries[0]?.slug ?? "index";
+}
+
+const homeEntries = docEntries.filter((e) => e.group === HOME);
+const groupKeys = [...new Set(docEntries.map((e) => e.group).filter((g) => g !== HOME))].sort();
+
+const sections: Section[] = [];
+if (homeEntries.length) {
+  sections.push({ key: HOME, title: "Home", landing: landingFor(homeEntries, "index") });
+}
+for (const g of groupKeys) {
+  const entries = docEntries.filter((e) => e.group === g);
+  sections.push({ key: g, title: prettify(g), landing: landingFor(entries, g) });
+}
+
+function sectionEntries(group: string): DocEntry[] {
+  return docEntries.filter((e) => e.group === group);
+}
 
 const iconMap: Record<string, React.ReactNode> = {
   index: <Home size={18} />,
@@ -53,10 +82,8 @@ const iconMap: Record<string, React.ReactNode> = {
   "api-reference": <BookOpen size={18} />,
 };
 
-const tabs = docEntries.filter((e) => PRIMARY_SLUGS.includes(e.slug));
-
-type NavItem = { slug: string; title: string };
-const navItems: NavItem[] = [...tabs.map((t) => ({ slug: t.slug, title: t.title })), { slug: "playground", title: "Playground" }];
+const getStartedLanding =
+  sections.find((s) => s.key.includes("getting-started"))?.landing ?? "index";
 
 function slugify(text: string): string {
   return text
@@ -222,26 +249,45 @@ function ThemeToggle() {
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside className="sticky top-[6.75rem] hidden h-[calc(100vh-6.75rem)] w-60 shrink-0 overflow-y-auto border-r border-border lg:block">
-      <nav className="space-y-0.5 p-4">
-        <div className="px-3 pb-2 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      <nav className="space-y-1 p-4">
+        <div className="px-3 pb-1 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Pages
         </div>
-        {docEntries.map((entry) => (
-          <NavLink
-            key={entry.slug}
-            to={`/docs/${entry.slug}`}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-              }`
-            }
-          >
-            <span className="shrink-0">{iconMap[entry.slug] || <FileText size={16} />}</span>
-            <span className="truncate">{entry.title}</span>
-          </NavLink>
+        {sections.map((section) => (
+          <div key={section.key} className="mb-1.5">
+            <NavLink
+              to={`/docs/${section.landing}`}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded-md px-2 py-1 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+                  isActive
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`
+              }
+            >
+              {section.title}
+            </NavLink>
+            <div className="ml-2.5 mt-0.5 space-y-0.5 border-l border-border pl-2">
+              {sectionEntries(section.key).map((entry) => (
+                <NavLink
+                  key={entry.slug}
+                  to={`/docs/${entry.slug}`}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-accent text-foreground"
+                        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                    }`
+                  }
+                >
+                  <span className="shrink-0">{iconMap[entry.slug] || <FileText size={15} />}</span>
+                  <span className="truncate">{entry.title}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
         <div className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Tools
@@ -389,7 +435,7 @@ export default function App() {
             <ThemeToggle />
             <button
               type="button"
-              onClick={() => navigate("/docs/getting-started")}
+              onClick={() => navigate(`/docs/${getStartedLanding}`)}
               className="inline-flex h-9 items-center gap-1 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
             >
               Get started
@@ -398,12 +444,12 @@ export default function App() {
           </div>
         </div>
 
-        {/* Sub-nav tabs */}
+        {/* Sub-nav tabs: one per section */}
         <nav className="flex h-11 items-center gap-1 overflow-x-auto border-t border-border px-5 sm:px-8">
-          {navItems.map((entry) => (
+          {sections.map((section) => (
             <NavLink
-              key={entry.slug}
-              to={`/docs/${entry.slug}`}
+              key={section.key}
+              to={`/docs/${section.landing}`}
               className={({ isActive }) =>
                 `-mb-px inline-flex h-11 items-center whitespace-nowrap border-b-2 px-3 text-sm font-medium transition-colors ${
                   isActive
@@ -412,7 +458,7 @@ export default function App() {
                 }`
               }
             >
-              {entry.title}
+              {section.title}
             </NavLink>
           ))}
         </nav>

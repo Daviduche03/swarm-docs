@@ -1,0 +1,80 @@
+# Batch swarm completions
+
+Execute multiple swarm completions concurrently using optimized thread pool
+execution.
+
+> **Premium tier required:** This endpoint is available only on Pro, Ultra, and Premium plans. [Upgrade your account](https://swarms.world/platform/account).
+
+## Endpoint
+
+`POST /v1/swarm/batch/completions`
+
+**Authentication:** Required — `x-api-key` header
+**Rate limiting:** Subject to tier-based rate limits; max **50** swarm specs per batch
+
+## Request body
+
+An array of `SwarmSpec` objects (max **50** per request). Each entry follows the
+[SwarmSpec](/docs/reference/swarm-completions#request-body--swarmspec) schema. The cap is
+enforced at the request-validation layer — exceeding it returns a **422** error.
+
+## Response
+
+**200** — an array of `SwarmBatchCompletionOutput` objects (one per swarm):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `string` | Execution status (`success` or `error`) |
+| `swarm_name` | `string` | Name of the swarm |
+| `result` | `any` | Result of the swarm execution (present on success) |
+| `usage` | `object` | Resource usage statistics (present on success) |
+| `detail` | `string` | Error details (present on error) |
+
+## Example
+
+```bash
+curl -X POST https://api.swarms.world/v1/swarm/batch/completions \
+  -H "x-api-key: $SWARMS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "name": "Research Swarm",
+      "description": "Conducts comprehensive research",
+      "agents": [
+        {
+          "agent_name": "Research Agent",
+          "description": "Conducts initial research",
+          "system_prompt": "You are a research assistant specializing in comprehensive data gathering.",
+          "model_name": "gpt-4",
+          "role": "worker",
+          "max_loops": 1,
+          "max_tokens": 8192,
+          "temperature": 0.7
+        }
+      ],
+      "max_loops": 1,
+      "swarm_type": "SequentialWorkflow",
+      "task": "Research recent AI advancements and provide analysis."
+    }
+  ]'
+```
+
+```json
+[
+  {
+    "status": "success",
+    "swarm_name": "Research Swarm",
+    "result": { "output": "Recent AI advancements include..." },
+    "usage": { "input_tokens": 400, "output_tokens": 800, "total_tokens": 1200 }
+  }
+]
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 403 | Free tier account (premium endpoint) |
+| 422 | Schema validation failure, or more than 50 swarm specs |
+| 429 | Rate limit exceeded |

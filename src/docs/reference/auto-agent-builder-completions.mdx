@@ -1,0 +1,83 @@
+# Auto agent builder completions
+
+Generate a roster of agent configurations for a task. A single builder agent
+designs the team and returns ready-to-post `AgentSpec` entries. The generated
+agents are **not executed** by this endpoint — post them to
+`/v1/swarm/completions` or another multi-agent endpoint yourself.
+
+## Endpoint
+
+`POST /v1/auto-agent-builder/completions`
+
+**Authentication:** Required — `x-api-key` header
+**Rate limiting:** Subject to tier-based rate limits
+
+## Request body — `AutoAgentBuilderInput`
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `task` | `string` | Yes | — | The task the generated team should be able to handle. The only required field |
+| `name` | `string` | No | — | Name of this builder run |
+| `description` | `string` | No | — | Description of this builder run |
+| `model_name` | `string` | No | framework default | Model backing the builder agent itself (not the generated agents) |
+| `max_agents` | `integer` | No | `5` | Upper bound on roster size (1–100). A ceiling, not a target |
+| `num_agents` | `integer` | No | — | Exact number of agents to generate (1–100). Overrides `max_agents` |
+| `system_prompt` | `string` | No | framework default | Custom instructions for the builder agent |
+| `agent_kwargs` | `object` | No | — | Extra keyword arguments carried on every generated agent (e.g. `max_loops`). Keys that collide with generated fields are ignored |
+
+## Response
+
+**200** — `AutoAgentBuilderOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job_id` | `string` | Job ID of the builder run |
+| `name` | `string` | Name of the run |
+| `description` | `string` | Description of the run |
+| `status` | `string` | Status of the run |
+| `agents` | `array[AgentSpec]` | The generated roster — each entry can be posted unmodified to `/v1/swarm/completions` |
+| `usage` | `object` | `input_tokens`, `output_tokens`, `total_tokens`, `token_cost`, `cost_per_agent` |
+| `timestamp` | `string` | Timestamp of the run |
+
+## Example
+
+```bash
+curl -X POST https://api.swarms.world/v1/auto-agent-builder/completions \
+  -H "x-api-key: $SWARMS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Produce a weekly market research report",
+    "name": "Research Team Builder",
+    "max_agents": 5
+  }'
+```
+
+```json
+{
+  "job_id": "builder-abc123",
+  "name": "Research Team Builder",
+  "description": "",
+  "status": "success",
+  "agents": [
+    {
+      "agent_name": "Market Researcher",
+      "description": "Gathers current market data",
+      "system_prompt": "You are a market researcher...",
+      "model_name": "gpt-4.1",
+      "role": "researcher",
+      "max_loops": 1,
+      "max_tokens": 16000
+    }
+  ],
+  "usage": { "input_tokens": 400, "output_tokens": 600, "total_tokens": 1000, "token_cost": 0.013, "cost_per_agent": 0.01 },
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 422 | Missing `task` or schema validation failure |
+| 401 | Missing or invalid API key |
+| 429 | Rate limit exceeded |

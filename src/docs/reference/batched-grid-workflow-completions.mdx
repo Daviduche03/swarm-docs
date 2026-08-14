@@ -1,0 +1,90 @@
+# Batched grid workflow completions
+
+Execute a batched grid workflow enabling parallel execution of multiple agents
+across multiple tasks in a single request.
+
+> **Premium tier required:** This endpoint is available only on Pro, Ultra, and Premium plans. [Upgrade your account](https://swarms.world/platform/account).
+
+## Endpoint
+
+`POST /v1/batched-grid-workflow/completions`
+
+**Authentication:** Required — `x-api-key` header
+**Rate limiting:** Subject to tier-based rate limits; max **50** agent completions and **50** tasks
+
+## Request body — `BatchedGridWorkflowInput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `string` | Name of the batched grid workflow |
+| `description` | `string` | Description of the workflow |
+| `agent_completions` | `array[AgentSpec]` | The agent completions to run (max 50) |
+| `tasks` | `array[string]` | The tasks to complete (max 50) |
+| `max_loops` | `integer` | Maximum loops for the workflow |
+| `imgs` | `array[string]` | Images to be used by the workflow |
+
+## Response
+
+**200** — `BatchedGridWorkflowOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job_id` | `string` | Job ID of the workflow |
+| `name` | `string` | Name of the workflow |
+| `description` | `string` | Description of the workflow |
+| `status` | `string` | Status of the workflow |
+| `outputs` | `any` | Outputs of the workflow (task × agent matrix) |
+| `usage` | `object` | Usage statistics: `input_tokens`, `output_tokens`, `total_tokens`, `token_cost`, `cost_per_agent` |
+| `timestamp` | `string` | Timestamp of the workflow |
+
+## Example
+
+```bash
+curl -X POST https://api.swarms.world/v1/batched-grid-workflow/completions \
+  -H "x-api-key: $SWARMS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Comparative Analysis Grid",
+    "description": "Evaluates multiple market theses",
+    "agent_completions": [
+      {
+        "agent_name": "Bull Analyst",
+        "description": "Analyzes from a bullish perspective",
+        "system_prompt": "You are a bullish market analyst.",
+        "model_name": "gpt-4.1-mini"
+      },
+      {
+        "agent_name": "Bear Analyst",
+        "description": "Analyzes from a bearish perspective",
+        "system_prompt": "You are a bearish market analyst.",
+        "model_name": "gpt-4.1-mini"
+      }
+    ],
+    "tasks": [
+      "Evaluate the semiconductor sector outlook",
+      "Evaluate the renewable energy sector outlook"
+    ],
+    "max_loops": 1
+  }'
+```
+
+```json
+{
+  "job_id": "grid-abc123",
+  "name": "Comparative Analysis Grid",
+  "description": "Evaluates multiple market theses",
+  "status": "success",
+  "outputs": { "results": [ ... ] },
+  "usage": { "input_tokens": 2000, "output_tokens": 1000, "total_tokens": 3000, "token_cost": 0.031, "cost_per_agent": 0.02 },
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 403 | Free tier account (premium endpoint) |
+| 422 | Schema validation failure |
+| 429 | Rate limit exceeded |

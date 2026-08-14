@@ -1,0 +1,107 @@
+# Swarm types
+
+Multi-agent swarms coordinate multiple AI agents to solve complex problems. The
+primary endpoint is `POST /v1/swarm/completions`, which accepts a `SwarmSpec`
+body where the `swarm_type` field selects the orchestration architecture. Call
+`GET /v1/swarms/available` to retrieve the live list of supported types with
+metadata.
+
+## Available swarm types
+
+| Swarm type | Description | Best for |
+|------------|-------------|----------|
+| `SequentialWorkflow` | Executes tasks in a strict, predefined order | Process automation, step-by-step workflows |
+| `ConcurrentWorkflow` | Runs independent tasks in parallel for higher throughput | Parallel processing, independent tasks |
+| `GroupChat` | Multi-agent collaborative discussion toward a shared goal | Brainstorming, collaborative problem solving |
+| `MixtureOfAgents` | Combines diverse specialist agents for complex tasks | Tasks requiring multiple areas of expertise |
+| `MajorityVoting` | Consensus-based decision-making across multiple agents | Decision making, validation tasks |
+| `CouncilAsAJudge` | Expert panel with a final judge | Expert evaluation, quality assessment |
+| `AgentRearrange` | Dynamically reorganizes agents to optimize task performance | Adaptive workflows, optimization |
+| `MultiAgentRouter` | Intelligent dispatcher that routes tasks based on capabilities/load | Large-scale task distribution |
+| `HierarchicalSwarm` | Multi-level structures with delegation and escalation | Complex organizational structures |
+| `HeavySwarm` | Question, worker, and synthesis agents for deep analysis | Deep research, comprehensive analysis |
+| `LLMCouncil` | Council of models with a chairman | Multi-model deliberation, synthesis |
+| `DebateWithJudge` | Structured debate with a judge | Argument evaluation, contested questions |
+| `RoundRobin` | Agents take turns in rotation | Balanced participation, iterative refinement |
+| `PlannerWorkerSwarm` | Planner decomposes tasks; workers pull from a shared queue | Task decomposition, project execution |
+| `BatchedGridWorkflow` | Grid of tasks across agents | Running many task/agent combinations |
+| `auto` | Automatically selects a swarm type | Letting the API pick the best architecture |
+
+> `GraphWorkflow` is available through a dedicated endpoint (`POST /v1/graph-workflow/completions`) rather than the `swarm_type` field. See the [reference](/docs/reference/graph-workflow-completions).
+
+## Choosing an architecture
+
+- **Sequential** tasks where each step depends on the previous → `SequentialWorkflow`
+- **Parallel**, independent operations → `ConcurrentWorkflow`
+- **Interactive problem solving** → `GroupChat`
+- **Multiple domains of expertise** → `MixtureOfAgents`
+- **Consensus / quality assurance** → `MajorityVoting`
+- **Team automation with clear responsibility chains** → `HierarchicalSwarm`
+- **Dynamic, adaptive processing** → `AgentRearrange`
+
+## Swarm completion input
+
+The `SwarmSpec` request body has a handful of common fields plus
+swarm-type-specific tuning parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `string` | — | Swarm name (max 100 characters) |
+| `description` | `string` | — | Objectives, capabilities, and intended outcomes |
+| `swarm_type` | `string` | — | The orchestration architecture (table above) |
+| `agents` | `array[AgentSpec]` | — | The agents participating in the swarm |
+| `task` | `string` | — | The task the swarm should accomplish |
+| `tasks` | `array[string]` | — | A list of tasks (for multi-task workflows) |
+| `messages` | `array[object]` | — | Messages for conversational workflows like `GroupChat` |
+| `max_loops` | `integer` | `1` | Maximum number of execution loops |
+| `rearrange_flow` | `string` | — | Task-flow instructions for `AgentRearrange` |
+| `stream` | `boolean` | `false` | Stream the output in real time |
+| `multi_agent_collab_prompt` | `boolean` | `true` | Inject the multi-agent collaboration prompt |
+| `list_all_agents` | `boolean` | `false` | List all agents and their descriptions to one another |
+
+Swarm-type-specific fields include `heavy_swarm_question_agent_model_name`,
+`heavy_swarm_worker_model_name`, `heavy_swarm_variant`, `heavy_swarm_max_loops`
+(`HeavySwarm`), `council_judge_model_name` (`CouncilAsAJudge`),
+`chairman_model` (`LLMCouncil`), `director_model_name` and `director_settings`
+(`HierarchicalSwarm`).
+
+## Example
+
+```bash
+curl -X POST "https://api.swarms.world/v1/swarm/completions" \
+  -H "x-api-key: $SWARMS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Research Team",
+    "description": "Multi-agent research swarm",
+    "swarm_type": "MixtureOfAgents",
+    "task": "Analyze the impact of AI on healthcare",
+    "agents": [
+      {
+        "agent_name": "Research Analyst",
+        "description": "Conducts comprehensive research",
+        "system_prompt": "You are a research analyst specializing in healthcare technology.",
+        "model_name": "gpt-4.1",
+        "max_loops": 1,
+        "temperature": 0.3
+      }
+    ],
+    "max_loops": 1
+  }'
+```
+
+## Response
+
+The endpoint returns a `SwarmCompletion` object:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job_id` | `string` | Unique identifier for the swarm completion |
+| `status` | `string` | Status of the completion |
+| `swarm_name` | `string` | Name of the swarm |
+| `description` | `string` | Description of the swarm |
+| `swarm_type` | `string` | Type of the swarm |
+| `output` | `any` | Output of the swarm (string, array, or object) |
+| `number_of_agents` | `integer` | Number of agents in the swarm |
+| `execution_time` | `number` | Execution time in seconds |
+| `usage` | `object` | Token counts and costs |

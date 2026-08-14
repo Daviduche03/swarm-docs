@@ -1,0 +1,205 @@
+# TypeScript SDK
+
+The Weldrr-generated TypeScript SDK for the Swarms API. It provides typed methods
+for every public endpoint, full request/response type inference, and Node.js
+compatibility.
+
+## Installation
+
+```bash
+npm install swarm-sdk-typescript
+```
+
+Or install from source:
+
+```bash
+npm install github:{owner}/swarm-sdk-typescript
+```
+
+## Import
+
+```typescript
+import { Client } from "swarm-sdk-typescript";
+```
+
+## Quickstart
+
+Instantiate the client with your API key and base URL, then make your first call:
+
+```typescript
+import { Client } from "swarm-sdk-typescript";
+
+const client = new Client({
+  apiKey: process.env.SWARMS_API_KEY, // sends "x-api-key: <key>"
+  baseURL: "https://api.swarms.world",
+});
+
+const result = await client.agentCompletions.create({
+  agent_config: {
+    agent_name: "Research Analyst",
+    description: "Expert in analyzing and synthesizing research data",
+    system_prompt: "You are a Research Analyst with expertise in data analysis and synthesis.",
+    model_name: "gpt-4.1-mini",
+    max_tokens: 8192,
+    temperature: 0.7,
+  },
+  task: "Analyze the impact of artificial intelligence on healthcare",
+});
+
+console.log(result.outputs);
+```
+
+## Client setup
+
+### Authentication
+
+The Swarms API authenticates with an API key. The client sends it as the
+`x-api-key` header by default; `Authorization: Bearer <key>` is also accepted
+(useful for OpenAI SDK compatibility). Get a key at
+[swarms.world/platform/api-keys](https://swarms.world/platform/api-keys).
+
+```typescript
+const client = new Client({ apiKey: "your-swarms-api-key" });
+```
+
+### Base URL
+
+The default base URL is `https://api.swarms.world`. Override it if you are
+targeting a different deployment:
+
+```typescript
+const client = new Client({
+  apiKey: process.env.SWARMS_API_KEY,
+  baseURL: "https://api.swarms.world",
+});
+```
+
+### Timeouts and retries
+
+The generated client exposes per-request options for timeout and retries:
+
+```typescript
+const result = await client.agentCompletions.create(payload, {
+  timeout: 30_000,   // request timeout in ms
+  maxRetries: 2,     // retries on transient failures
+});
+```
+
+## Usage examples
+
+### Health check
+
+```typescript
+const health = await client.health.check();
+console.log(health.status); // "ok"
+```
+
+### Chat completions (OpenAI-compatible)
+
+```typescript
+const response = await client.chatCompletions.create({
+  model: "gpt-4.1",
+  messages: [
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "user", content: "What are the key trends in renewable energy?" },
+  ],
+  max_tokens: 1024,
+  temperature: 0.5,
+});
+
+console.log(response.choices[0].message.content);
+console.log(response.usage.total_tokens);
+```
+
+### Swarm completions
+
+```typescript
+const result = await client.swarmCompletions.create({
+  name: "Financial Analysis Swarm",
+  description: "Market analysis swarm",
+  swarm_type: "SequentialWorkflow",
+  task: "Analyze the current market conditions and provide economic forecasts.",
+  agents: [
+    {
+      agent_name: "Market Analyst",
+      description: "Analyzes market trends",
+      system_prompt: "You are a financial analyst expert specializing in market trend analysis.",
+      model_name: "gpt-4.1-mini",
+      max_loops: 1,
+      max_tokens: 8192,
+      temperature: 0.5,
+    },
+  ],
+  max_loops: 1,
+});
+
+console.log(result.output);
+```
+
+### Reasoning agents (premium)
+
+```typescript
+const result = await client.reasoningAgentCompletions.create({
+  agent_name: "math-reasoner",
+  model_name: "claude-sonnet-4-20250514",
+  swarm_type: "reasoning-duo",
+  task: "Prove that the sum of any three consecutive integers is divisible by 3",
+});
+
+console.log(result.outputs);
+```
+
+### Batch processing (premium)
+
+```typescript
+const result = await client.agentBatchCompletions.create([
+  {
+    agent_config: { agent_name: "Analyst 1", system_prompt: "You are a financial analyst.", model_name: "gpt-4.1-mini" },
+    task: "Analyze Q1 financial results",
+  },
+  {
+    agent_config: { agent_name: "Analyst 2", system_prompt: "You are a market analyst.", model_name: "gpt-4.1-mini" },
+    task: "Evaluate market trends",
+  },
+]);
+
+console.log(result.batch_id, result.total_requests);
+```
+
+### Graph workflow (premium)
+
+```typescript
+const result = await client.graphWorkflow.create({
+  name: "Research → Write Pipeline",
+  agents: [
+    { agent_name: "Researcher", system_prompt: "You are a research specialist.", model_name: "gpt-4.1" },
+    { agent_name: "Writer", system_prompt: "You are a technical writer.", model_name: "gpt-4.1" },
+  ],
+  edges: [{ source: "Researcher", target: "Writer" }],
+  entry_points: ["Researcher"],
+  end_points: ["Writer"],
+  task: "Write a report on renewable energy adoption trends",
+});
+
+console.log(result.outputs);
+```
+
+### Catalog and account resources
+
+```typescript
+const swarmTypes = await client.swarms.listAvailable();
+const models = await client.models.list();
+const modelsDetailed = await client.models.listAvailable();
+const tools = await client.tools.listAvailable();
+const agents = await client.agents.list();
+const logs = await client.swarmLogs.get();
+const metrics = await client.metrics.summary();
+const rateLimits = await client.rateLimits.get();
+const pricing = await client.usage.getCosts();
+const credits = await client.account.getCredits();
+```
+
+> **Note:** Method names are generated from the endpoint operation IDs
+> (e.g. `agentCompletions.create`, `swarmCompletions.create`,
+> `reasoningAgentTypes.list`, `autoAgentBuilder.create`). Check the generated
+> type definitions for the full signature of each method.

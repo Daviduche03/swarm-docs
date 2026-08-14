@@ -1,0 +1,108 @@
+# Authentication
+
+Every Swarms API request must be authenticated. This guide walks through creating
+an API key, configuring it in your environment, and authenticating requests.
+
+## Step 1: Create your account
+
+1. Navigate to the official Swarms platform: [https://swarms.world](https://swarms.world/)
+2. Complete the registration process with the required information.
+3. Verify your email address to activate your account.
+
+**Benefit:** New users automatically receive **$20 in free API credits** upon successful signup.
+
+## Step 2: Generate your API key
+
+1. Log into your Swarms account.
+2. Open the API Keys section: [https://swarms.world/platform/api-keys](https://swarms.world/platform/api-keys)
+3. Click **Create New API Key**.
+4. Assign a descriptive name for your key.
+5. Configure key permissions based on your intended use case.
+6. Save the generated API key immediately.
+
+**Important:** Store your API key securely — it is only displayed once upon creation.
+
+## Step 3: Configure your environment
+
+**Option A: Environment variable (recommended)**
+
+```bash
+export SWARMS_API_KEY="your_api_key_here"
+```
+
+**Option B: Environment file (.env)**
+
+```
+SWARMS_API_KEY=your_api_key_here
+```
+
+**Security note:** Never commit API keys to version control. Use environment variables or secure configuration management tools.
+
+## Step 4: Verify your API key
+
+Send your key in the `x-api-key` header. The `Authorization: Bearer <key>` header is also accepted (useful for OpenAI SDK compatibility).
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" https://api.swarms.world/v1/account/credits
+```
+
+```bash
+curl -H "Authorization: Bearer $SWARMS_API_KEY" https://api.swarms.world/v1/account/credits
+```
+
+A successful response returns your current credit balance, confirming the key is active:
+
+```json
+{
+  "credit": 20.0,
+  "free_credit": 20.0,
+  "referral_credits": 0.0,
+  "total_credits": 20.0
+}
+```
+
+## Authentication headers
+
+| Header | Example | Notes |
+|--------|---------|-------|
+| `x-api-key` | `x-api-key: sk-abc123` | Primary authentication method |
+| `Authorization` | `Authorization: Bearer sk-abc123` | Alternative; required for OpenAI SDK compatibility |
+| `Content-Type` | `Content-Type: application/json` | Required for JSON request bodies |
+| `Accept-Encoding` | `Accept-Encoding: gzip, lz4` | Client compression support (responses are compressed when beneficial) |
+
+## API key management
+
+- Create specific API keys for different applications and services.
+- Use descriptive naming conventions to identify key purposes.
+- Regularly rotate keys for enhanced security.
+- Monitor key usage through the platform dashboard.
+- Revoke unused or compromised keys immediately.
+
+## Security considerations
+
+- Keep API keys confidential and secure.
+- Use HTTPS for all API communications.
+- Implement proper error handling in applications.
+- Monitor API usage for unusual activity.
+- Report suspected security issues immediately.
+
+## Connection details
+
+| Setting | Value |
+|---------|-------|
+| Base URL / domain | `https://api.swarms.world` |
+| API key header | `x-api-key: <your-api-key>` |
+| Alternative auth header | `Authorization: Bearer <your-api-key>` |
+| Content-Type | `application/json` |
+| Compression | `gzip`, `lz4` via `Accept-Encoding` |
+| Methods | `GET`, `POST`, `PUT`, `DELETE`, etc. |
+| Response format | `application/json` |
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 402 | Credit balance at or below the $1.00 minimum for billable endpoints |
+| 403 | Insufficient permissions or subscription tier (premium-only models/endpoints) |
+| 429 | Rate limit exceeded |

@@ -1,0 +1,49 @@
+# Reasoning agent types
+
+Retrieve all available reasoning agent types supported by the Swarms API.
+
+## Endpoint
+
+`GET /v1/reasoning-agent/types`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `ReasoningAgentTypesOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `string` | Status of the request (default `"success"`) |
+| `agent_types` | `array[string]` | Available reasoning agent type identifiers |
+
+## Example
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" \
+     https://api.swarms.world/v1/reasoning-agent/types
+```
+
+```json
+{
+  "status": "success",
+  "agent_types": [
+    "reasoning-duo",
+    "self-consistency",
+    "ire",
+    "reasoning-agent",
+    "consistency-agent",
+    "ire-agent",
+    "ReflexionAgent",
+    "GKPAgent",
+    "AgentJudge"
+  ]
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |

@@ -1,0 +1,32 @@
+# API root
+
+Returns the API root with a welcome message and links to documentation and API
+key management.
+
+## Endpoint
+
+`GET /`
+
+## Authentication
+
+None required.
+
+## Response
+
+Returns an HTTP 200 with a JSON welcome object.
+
+## Example
+
+```bash
+curl https://api.swarms.world/
+```
+
+```json
+{
+  "message": "Welcome to the Swarms API",
+  "docs": "https://docs.swarms.ai",
+  "api_keys": "https://swarms.world/platform/api-keys"
+}
+```
+
+> The exact body is informational and may change; treat it as free-form JSON.

@@ -1,0 +1,160 @@
+# Pricing
+
+This page details the pricing structure and how credits are deducted for various
+API operations.
+
+> To upgrade your plan, visit the [Account Dashboard](https://swarms.world/platform/account), open the **Billing** tab, and select your tier.
+
+## API subscriptions
+
+Flexible subscription plans that scale with your needs. Usage is billed per
+operation on top of the subscription fee.
+
+### Plans at a glance
+
+| Plan | Monthly price | Annual price | Premium endpoints | SOC 2 | Priority routing | Support | Best for |
+|------|--------------:|-------------:|:-----------------:|:-----:|:----------------:|---------|----------|
+| Free | $0 | $0/year | No | No | No | Community | Getting started |
+| Pro | $19.99 | $203.90/year | Yes | No | No | Priority | Professionals |
+| Ultra | $100 | $1,020/year | Yes | Yes | Yes | Priority | Teams & production |
+
+Prices shown are subscription fees; API usage is billed per operation.
+
+### Free
+
+Get started with AI. No monthly fees — pay only for usage.
+
+- Sign-up bonus credits
+- Basic API access
+- Pay-per-use pricing
+- Community support
+- Standard processing speed
+- Access to the Marketplace
+- **Note:** premium endpoints (batch processing, reasoning agents, advanced workflows) are not available on the free tier
+
+### Pro
+
+Most popular. Perfect for professionals who need more power and features.
+
+- $19.99/month (save 15% with annual billing)
+- Global availability
+- Exclusive multi-agent architectures
+- Accelerated hardware
+- API telemetry platform
+- Priority support
+- Access to Pro models
+- **Premium endpoints**: batch processing, reasoning agents, and advanced workflows
+  - `/v1/agent/batch/completions`
+  - `/v1/swarm/batch/completions`
+  - `/v1/reasoning-agent/completions`
+  - `/v1/batched-grid-workflow/completions`
+  - Graph workflows
+
+### Ultra
+
+Best for growing teams and production workloads that need higher limits and security.
+
+- $100/month (save 15% with annual billing)
+- Everything in Pro, plus:
+  - Premium models
+  - More agents per request and more completions
+  - Increased rate limits
+  - SOC 2 compliance
+  - Enhanced security features
+  - View previous agent configurations
+  - Priority region/zone routing
+  - Full access to premium endpoints
+
+### Enterprise
+
+Critical support, compliance, and control for large-scale enterprises.
+
+- Contact sales for custom pricing
+- Dedicated 24/7 support
+- Custom solutions engineering
+- Onsite training and onboarding
+- Custom agent development
+- No rate limits
+- Access to experimental features
+
+## Premium-only models
+
+Free tier accounts are blocked from requesting the following models on any
+endpoint (including `/v1/agent/completions` and `/v1/swarm/completions`),
+regardless of available credits. Any active Pro or Ultra subscription unlocks
+all of them:
+
+- `gpt-5`
+- `gpt-4.1`
+- `gemini-2.5-pro`
+- `claude-4-opus-20250514`
+- `claude-4-sonnet-20250514`
+- `claude-haiku-4-5`
+- `claude-opus-4-1`
+- `claude-sonnet-4-5`
+- `xai/grok-4` variants
+- Any `groq/*` model
+
+Requesting one of these models on the free tier returns a 403 error with
+suggested free-tier alternatives.
+
+## Usage-based pricing
+
+Pay only for what you use with transparent, per-operation pricing. All API
+endpoints use a unified pricing structure for token costs.
+
+| Item | Price | Unit | Notes |
+|------|-------|------|-------|
+| Input tokens | $6.50 | per 1M tokens | Unified across all endpoints |
+| Output tokens | $18.50 | per 1M tokens | Unified across all endpoints |
+| Agent cost | $0.01 | per agent | For swarms and workflows |
+| Image processing | $0.25 | per image | Charged when an image is provided |
+| MCP call | $0.10 | per call | Charged when an MCP URL is provided |
+| Exa search tool | $0.04 | per search | Charged per search execution |
+| Web scraper tool | $0.15 | per scrape | Charged per scrape execution |
+| Night-time discount | 50% off tokens | 8 PM – 6 AM PT | Swarm completions only |
+
+### Discounts
+
+**Night-time discount:** Swarm completions receive a 50% discount on token costs
+during 8 PM – 6 AM Pacific Time. Agent costs remain the same.
+
+### Retrieving current costs
+
+You can retrieve the live pricing model with `GET /v1/usage/costs`:
+
+```json
+{
+  "usage_pricing": {
+    "swarm_completions_agent_cost": 0.01,
+    "swarm_completions_input_cost_per_1m": 6.5,
+    "swarm_completions_output_cost_per_1m": 18.5,
+    "agent_completions_input_cost_per_1m": 6.5,
+    "agent_completions_output_cost_per_1m": 18.5,
+    "agent_completions_img_cost": 0.25,
+    "agent_completions_mcp_cost": 0.1,
+    "search_cost": 0.04,
+    "scrape_cost": 0.15,
+    "night_time_discount": 0.5
+  },
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+See the [usage report](/docs/resources/usage-report) for details.
+
+## Important notes
+
+| Note | Description |
+|------|-------------|
+| Minimum balance | Billable completion endpoints require a total credit balance above **$1.00**, checked before the request runs. Below this, requests are rejected with a **402 Payment Required** error before any work is done |
+| Credits deduction | Credits are deducted automatically after each request completes |
+| Credits usage order | Free credits are used first, followed by regular credits |
+| Token counting | Token counts are calculated using model-specific tokenizers |
+| Pricing updates | Pricing may change periodically — check `/v1/usage/costs` for current pricing |
+
+## See also
+
+- [Premium endpoints](/docs/resources/premium-endpoints)
+- [Rate limits](/docs/resources/rate-limits)
+- [Pricing endpoint](/docs/reference/usage-costs)

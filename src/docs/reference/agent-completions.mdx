@@ -1,0 +1,147 @@
+# Agent completions
+
+Execute a single AI agent with a specific task, configuration, and capabilities.
+Supports both standard and streaming responses.
+
+## Endpoint
+
+`POST /v1/agent/completions`
+
+**Authentication:** Required — `x-api-key` header (`Authorization: Bearer <key>` also accepted)
+**Rate limiting:** Subject to tier-based rate limits
+
+## Request body
+
+### AgentCompletion
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agent_config` | `AgentSpec` | Yes | The configuration of the agent to run |
+| `task` | `string` | No | The task to be completed by the agent |
+| `history` | `object` \| `array[object]` | No | Previous messages for multi-turn context. Dictionary or list of `{role, content}` messages |
+| `img` | `string` | No | A base64-encoded image for the agent to process |
+| `imgs` | `array[string]` | No | A list of base64-encoded images for the agent to process |
+| `tools_enabled` | `array[string]` | No | Built-in tools: `auto_search` (web search) and `web_scraper` (web scraping). Only one tool is attached per request — if both are listed, `auto_search` takes precedence. Enabling a tool is billed once per request |
+
+### AgentSpec
+
+The agent configuration object, reused across all completion endpoints:
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `agent_name` | `string` | No | — | Unique name identifying the agent's role and functionality |
+| `description` | `string` | No | — | Explanation of the agent's purpose and capabilities |
+| `system_prompt` | `string` | No | — | Initial instruction or context guiding the agent's behavior |
+| `marketplace_prompt_id` | `string` | No | — | ID of a marketplace prompt to use as the system prompt (fetched automatically) |
+| `model_name` | `string` | No | `claude-sonnet-5` | AI model to use, e.g. `gpt-4o`, `gpt-4.1`, `openai/o3-mini` |
+| `fallback_models` | `array[string]` | No | — | Ordered list of models tried in sequence if the primary fails; each is subject to the same tier restrictions |
+| `fallback_model_name` | `string` | No | — | Single fallback model tried after `fallback_models` |
+| `auto_generate_prompt` | `boolean` | No | `false` | Automatically create prompts based on task requirements |
+| `max_tokens` | `integer` | No | `16000` | Maximum tokens in responses. Values below 1 → 422 |
+| `temperature` | `number` | No | — | Randomness of output (0–2). If omitted, the provider default applies |
+| `role` | `string` | No | `worker` | Role of the agent within the swarm |
+| `max_loops` | `integer` \| `string` | No | `1` | Iterations the agent can perform. Integer ≥ 1, or `"auto"` for autonomous looping. Values below 1 → 422 |
+| `tools_list_dictionary` | `array[object]` | No | — | OpenAPI-style function definitions the agent can call |
+| `selected_tools` | `string` \| `array[string]` | No | all safe tools | Tools for the autonomous looper when `max_loops="auto"`. Available: `create_plan`, `think`, `subtask_done`, `complete_task`, `respond_to_user`, `create_file`, `update_file`, `read_file`, `list_directory`, `delete_file`, `create_sub_agent`, `assign_task`. `run_bash` is not permitted |
+| `mcp_url` | `string` | No | — | URL of the MCP server the agent can use |
+| `streaming_on` | `boolean` | No | `false` | Stream the agent's output |
+| `llm_args` | `object` | No | — | Additional LLM arguments (`top_p`, `frequency_penalty`, `presence_penalty`, `response_format`, …) |
+| `top_p` | `number` | No | — | `top_p` passed to the LLM |
+| `dynamic_temperature_enabled` | `boolean` | No | `false` | Dynamically adjust temperature based on the task |
+| `mcp_config` | `MCPConnection` | No | — | Single MCP connection |
+| `mcp_configs` | `MultipleMCPConnections` | No | — | Multiple MCP connections (`{ "connections": [...] }`) |
+| `tool_call_summary` | `boolean` | No | `true` | Summarize tool calls |
+| `reasoning_effort` | `string` | No | — | `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `ultra`, `max`. Ignored for Claude 5-family models |
+| `thinking_tokens` | `integer` | No | — | Number of tokens to use for thinking |
+| `reasoning_enabled` | `boolean` | No | `false` | Enable reasoning |
+| `publish_to_marketplace` | `boolean` | No | `false` | Publish this agent to the Swarms marketplace |
+| `use_cases` | `array[object]` | No | — | `{title, description}` dictionaries; required when publishing |
+| `tags` | `array[string]` | No | — | Marketplace tags (e.g. `["finance", "analysis"]`) |
+| `capabilities` | `array[string]` | No | — | Agent capabilities (e.g. `["trend-analysis"]`) |
+| `category` | `string` | No | — | Marketplace category (`research`, `content`, `coding`, …) |
+| `is_free` | `boolean` | No | `true` | Whether the agent is free in the marketplace |
+| `price_usd` | `number` | No | — | Price in USD (if not free) |
+| `handoffs` | `array[AgentSpec]` | No | — | Agent specifications this agent can hand off tasks to |
+
+## Response
+
+**200** — `AgentCompletionOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job_id` | `string` | Unique identifier for the completion |
+| `success` | `boolean` | Whether the completion succeeded |
+| `name` | `string` | Name of the executed agent |
+| `description` | `string` | Agent description |
+| `temperature` | `number` | Temperature setting used |
+| `outputs` | `any` | Generated output (string content, or array of tool calls) |
+| `usage` | `object` | Token usage and cost: `input_tokens`, `output_tokens`, `total_tokens`, `img_cost`, `total_cost` |
+| `timestamp` | `string` | ISO timestamp of completion |
+
+### Example
+
+```bash
+curl -X POST https://api.swarms.world/v1/agent/completions \
+  -H "x-api-key: $SWARMS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_config": {
+      "agent_name": "Research Analyst",
+      "description": "Expert in analyzing and synthesizing research data",
+      "system_prompt": "You are a Research Analyst with expertise in data analysis and synthesis.",
+      "model_name": "gpt-4.1-mini",
+      "max_tokens": 8192,
+      "temperature": 0.7
+    },
+    "task": "Analyze the impact of artificial intelligence on healthcare"
+  }'
+```
+
+```json
+{
+  "job_id": "agent-a1b2c3d4",
+  "success": true,
+  "name": "Research Analyst",
+  "description": "Expert in analyzing and synthesizing research data",
+  "temperature": 0.7,
+  "outputs": [
+    {
+      "role": "Research Analyst",
+      "content": "Artificial intelligence is transforming healthcare through..."
+    }
+  ],
+  "usage": {
+    "input_tokens": 150,
+    "output_tokens": 300,
+    "total_tokens": 450,
+    "img_cost": 0.0,
+    "total_cost": 0.0056
+  },
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+## Capabilities
+
+- **Multi-model support** — OpenAI, Anthropic, and any model supported by LiteLLM.
+- **Vision** — pass base64 images via `img`/`imgs`; costs are computed from image resolution.
+- **Conversation history** — dictionary or list format via `history`.
+- **Tools** — built-in `auto_search` / `web_scraper`, MCP servers, and custom `tools_list_dictionary`.
+- **Structured outputs** — pass a `json_schema` via `llm_args.response_format`, or function-calling schemas via `tools_list_dictionary` (the agent's `function.arguments` is a JSON string — parse it with `json.loads`).
+- **Max loops** — set `max_loops` to 3–5 for iterative tasks, or `"auto"` for autonomous agents.
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 400 | Invalid input, or the agent produced no output (nothing is billed) |
+| 401 | Missing or invalid API key |
+| 403 | Premium-only model or feature requested on the free tier |
+| 422 | Schema validation failure (e.g. `max_loops` or `max_tokens` below 1) |
+| 429 | Rate limit exceeded |
+| 500 | Server-side processing error |
+
+## See also
+
+- [Swarm completions](/docs/reference/swarm-completions) — multi-agent orchestration.
+- [Chat completions](/docs/reference/chat-completions) — OpenAI-compatible alternative.

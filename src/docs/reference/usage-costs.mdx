@@ -1,0 +1,72 @@
+# Pricing details
+
+Retrieve comprehensive pricing details for all API features, including usage
+costs, service costs, and special pricing features.
+
+## Endpoint
+
+`GET /v1/usage/costs`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `PricingDetailsOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `usage_pricing` | `UsagePricingModel` | Per-operation pricing (required) |
+| `timestamp` | `string` | ISO timestamp when the pricing was retrieved |
+
+### UsagePricingModel
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `swarm_completions_agent_cost` | `number` | `0.01` | Cost per agent in swarm completions (USD) |
+| `swarm_completions_input_cost_per_1m` | `number` | `6.5` | Cost per 1M input tokens for swarm completions |
+| `swarm_completions_output_cost_per_1m` | `number` | `18.5` | Cost per 1M output tokens for swarm completions |
+| `agent_completions_input_cost_per_1m` | `number` | `6.5` | Cost per 1M input tokens for agent completions |
+| `agent_completions_output_cost_per_1m` | `number` | `18.5` | Cost per 1M output tokens for agent completions |
+| `agent_completions_img_cost` | `number` | `0.25` | Cost per image for agent completions |
+| `agent_completions_mcp_cost` | `number` | `0.1` | Cost per MCP call |
+| `search_cost` | `number` | `0.04` | Cost per search operation |
+| `scrape_cost` | `number` | `0.15` | Cost per scrape operation |
+| `night_time_discount` | `number` | `0.5` | Discount multiplier for night-time usage (8 PM – 6 AM PT) |
+
+## Example
+
+```bash
+curl -X GET "https://api.swarms.world/v1/usage/costs" \
+  -H "x-api-key: $SWARMS_API_KEY"
+```
+
+```json
+{
+  "usage_pricing": {
+    "swarm_completions_agent_cost": 0.01,
+    "swarm_completions_input_cost_per_1m": 6.5,
+    "swarm_completions_output_cost_per_1m": 18.5,
+    "agent_completions_input_cost_per_1m": 6.5,
+    "agent_completions_output_cost_per_1m": 18.5,
+    "agent_completions_img_cost": 0.25,
+    "agent_completions_mcp_cost": 0.1,
+    "search_cost": 0.04,
+    "scrape_cost": 0.15,
+    "night_time_discount": 0.5
+  },
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 429 | Rate limit exceeded |
+| 500 | Internal error retrieving pricing |
+
+## See also
+
+- [Pricing](/docs/resources/pricing) — plans, credits, and cost notes.
+- [Usage report](/docs/resources/usage-report) — computing expected costs.

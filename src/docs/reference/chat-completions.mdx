@@ -1,0 +1,192 @@
+# Chat completions (OpenAI-compatible)
+
+OpenAI-compatible chat completions endpoint. Accepts the standard OpenAI request
+schema and returns the standard OpenAI response schema, supporting both streaming
+(SSE) and non-streaming modes. Works as a drop-in replacement with the OpenAI
+Python and TypeScript SDKs — change `base_url` and `api_key` and everything else
+works unchanged.
+
+Under the hood, every request is routed through the full Swarms agent
+infrastructure: model routing, token counting, billing, and logging apply
+exactly as they do for the native `/v1/agent/completions` endpoint.
+
+## Endpoint
+
+`POST /v1/chat/completions`
+
+**Authentication:** Required — `x-api-key` header or `Authorization: Bearer <key>`
+**Rate limiting:** Subject to tier-based rate limits
+
+## Request body — `ChatCompletionRequest`
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `model` | `string` | Yes | — | Model to use, e.g. `gpt-4.1`, `claude-sonnet-4-20250514` |
+| `messages` | `array[ChatMessage]` | Yes | — | The conversation (at least one `user` message required) |
+| `temperature` | `number` | No | `0.5` | Sampling temperature (0–2) |
+| `top_p` | `number` | No | — | Nucleus sampling parameter |
+| `n` | `integer` | No | `1` | Only `1` is supported — `n > 1` is rejected |
+| `stream` | `boolean` | No | `false` | Return Server-Sent Events (SSE) in the OpenAI chunk format |
+| `max_tokens` | `integer` | No | `8192` | Maximum tokens to generate |
+| `max_completion_tokens` | `integer` | No | — | Takes precedence over `max_tokens` if both are set |
+| `presence_penalty` | `number` | No | — | Penalize tokens already present in the text |
+| `frequency_penalty` | `number` | No | — | Penalize frequent tokens |
+| `user` | `string` | No | — | Unique end-user identifier for tracking |
+| `max_loops` | `integer` | No | `1` | **Swarms extension.** Agent reasoning loops. Pass via `extra_body` in the OpenAI SDK. Values below 1 → 500 error; use ≥ 1 |
+
+### ChatMessage
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `role` | `string` | Yes | `system`, `user`, or `assistant` |
+| `content` | `string` \| `array[ContentPart]` | No | Text or multimodal content parts |
+| `name` | `string` | No | Optional participant name |
+
+Content parts: `{"type": "text", "text": "..."}` and `{"type": "image_url", "image_url": {"url": "..."}}`. The `url` accepts HTTPS URLs and base64 data URIs.
+
+### Validation rules
+
+- At least one message with `role: "user"` is required.
+- `n` must be `1` — send separate requests for multiple completions.
+- Zero messages or only system messages are rejected.
+
+## Response
+
+**200** — `ChatCompletionResponse`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Unique completion ID, prefixed `chatcmpl-` |
+| `object` | `string` | Always `"chat.completion"` |
+| `created` | `integer` | Unix timestamp |
+| `model` | `string` | The model used |
+| `choices` | `array[Choice]` | Completion result (always one element) |
+| `usage` | `CompletionUsage` | Token usage for billing |
+
+**Choice:** `{ "index": 0, "message": { "role": "assistant", "content": "..." }, "finish_reason": "stop" }`
+
+**CompletionUsage:** `{ "prompt_tokens": 42, "completion_tokens": 128, "total_tokens": 170 }`
+
+## Streaming
+
+When `stream: true`, the response is returned as Server-Sent Events. Each event
+is a `data:` line containing a JSON chunk with `object: "chat.completion.chunk"`:
+
+```
+data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1711300000,"model":"gpt-4.1","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1711300000,"model":"gpt-4.1","choices":[{"index":0,"delta":{"content":"Quantum"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1711300000,"model":"gpt-4.1","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+## Examples
+
+### Non-streaming (Python OpenAI SDK)
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="your-swarms-api-key",
+    base_url="https://api.swarms.world/v1",
+)
+
+response = client.chat.completions.create(
+    model="gpt-4.1",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What are the key trends in renewable energy?"},
+    ],
+    max_tokens=1024,
+    temperature=0.5,
+)
+
+print(response.choices[0].message.content)
+print(f"Tokens used: {response.usage.total_tokens}")
+```
+
+### Non-streaming (TypeScript)
+
+```typescript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "your-swarms-api-key",
+  baseURL: "https://api.swarms.world/v1",
+});
+
+const response = await client.chat.completions.create({
+  model: "gpt-4.1",
+  messages: [
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "user", content: "What are the key trends in renewable energy?" },
+  ],
+  max_tokens: 1024,
+  temperature: 0.5,
+});
+
+console.log(response.choices[0].message.content);
+```
+
+### Streaming
+
+```python
+stream = client.chat.completions.create(
+    model="gpt-4.1",
+    messages=[{"role": "user", "content": "Write a haiku about AI agents."}],
+    stream=True,
+)
+
+for chunk in stream:
+    content = chunk.choices[0].delta.content
+    if content:
+        print(content, end="", flush=True)
+```
+
+### Multi-loop reasoning (`max_loops` extension)
+
+```python
+response = client.chat.completions.create(
+    model="gpt-4.1",
+    messages=[
+        {"role": "system", "content": "You are a rigorous analyst. Think step by step, then review and refine your answer."},
+        {"role": "user", "content": "What are the second-order effects of raising the federal funds rate by 50 basis points?"},
+    ],
+    max_tokens=2048,
+    extra_body={"max_loops": 3},
+)
+```
+
+## Errors
+
+Errors use the standard OpenAI error format so the OpenAI SDK's error classes
+work correctly. Error object: `{ "error": { "message", "type", "code", "param" } }`.
+
+| HTTP Status | `type` | When |
+|---|---|---|
+| 400 | `invalid_request_error` | Malformed request, validation failure, missing required fields |
+| 401 | `authentication_error` | Missing or invalid API key |
+| 403 | `permission_error` | Insufficient permissions or subscription tier |
+| 429 | `rate_limit_error` | Rate limit exceeded |
+| 500 | `server_error` | Internal error during agent execution |
+
+> Schema-validation failures on Swarms extension fields passed via `extra_body` (e.g. `max_loops: 0`) currently surface as a 500 `server_error`. Send `max_loops >= 1` to avoid this.
+
+## Differences from the OpenAI API
+
+| Behavior | OpenAI API | Swarms API |
+|---|---|---|
+| `n > 1` | Multiple choices | Rejected — send separate requests |
+| Tool/function calling | Supported | Not on this endpoint — use `/v1/agent/completions` with `tools_list_dictionary` |
+| `logprobs` | Supported | Not supported |
+| `response_format` (`json_object`) | Supported | Not on this endpoint — use `/v1/agent/completions` with structured output |
+| Streaming | True token-by-token | Simulated — agent runs to completion, then the result is delivered in chunks |
+| `max_loops` | N/A | Swarms extension — multi-loop reasoning (via `extra_body`) |
+
+## See also
+
+- [OpenAI-compatible overview](/docs/getting-started/quickstart#supported-models) — supported models.
+- [Agent completions](/docs/reference/agent-completions) — native endpoint with tools, vision, and structured output.

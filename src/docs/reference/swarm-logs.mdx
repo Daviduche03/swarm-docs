@@ -1,0 +1,55 @@
+# Request logs
+
+Retrieve all API request logs for all API keys associated with the authenticated
+user, excluding logs that contain client IP information.
+
+## Endpoint
+
+`GET /v1/swarm/logs`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `SwarmLogsOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `string` | Status of the request |
+| `count` | `integer` | Number of logs returned |
+| `logs` | `any` | The log entries |
+| `timestamp` | `string` | ISO timestamp of the response |
+
+## Example
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" \
+     https://api.swarms.world/v1/swarm/logs
+```
+
+```json
+{
+  "status": "success",
+  "count": 3,
+  "logs": [
+    {
+      "category": "completion",
+      "endpoint": "/v1/agent/completions",
+      "status": "success",
+      "timestamp": "2026-08-14T18:00:00+00:00"
+    }
+  ],
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+> Completed billable work is logged to the `swarms_api_logs` table with the
+> `completion` category. Telemetry and input rows are excluded from rate-limit
+> counting — see [Rate limits](/docs/resources/rate-limits).
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |

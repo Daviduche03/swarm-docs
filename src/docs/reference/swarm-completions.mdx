@@ -1,0 +1,109 @@
+# Swarm completions
+
+Execute a swarm completion with the specified task. Supports both standard and
+streaming responses.
+
+## Endpoint
+
+`POST /v1/swarm/completions`
+
+**Authentication:** Required — `x-api-key` header (`Authorization: Bearer <key>` also accepted)
+**Rate limiting:** Subject to tier-based rate limits
+
+## Request body — `SwarmSpec`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | `string` | — | Name of the swarm (max 100 characters) |
+| `description` | `string` | — | Objectives, capabilities, and intended outcomes |
+| `agents` | `array[AgentSpec]` | — | The agents participating in the swarm (see [AgentSpec](/docs/reference/agent-completions#agentspec)) |
+| `max_loops` | `integer` | `1` | Maximum number of execution loops |
+| `swarm_type` | `string` | — | Orchestration architecture. See [Swarm types](/docs/getting-started/swarm-types) |
+| `rearrange_flow` | `string` | — | Task-flow instructions for `AgentRearrange` |
+| `task` | `string` | — | The task the swarm should accomplish |
+| `tasks` | `array[string]` | — | A list of tasks for the swarm |
+| `messages` | `array[object]` \| `object` | — | Messages for conversational workflows (e.g. `GroupChat`) |
+| `img` | `string` | — | Optional image URL for vision-enabled agents |
+| `stream` | `boolean` | `false` | Stream the output |
+| `heavy_swarm_question_agent_model_name` | `string` | `gpt-4.1` | `HeavySwarm` question agent model |
+| `heavy_swarm_worker_model_name` | `string` | `claude-sonnet-4-20250514` | `HeavySwarm` worker agent model |
+| `heavy_swarm_variant` | `string` | `default` | `HeavySwarm` variant: `default`, `medium`, or `heavy` |
+| `heavy_swarm_max_loops` | `integer` | `1` | `HeavySwarm` max loops per agent |
+| `council_judge_model_name` | `string` | `gpt-5.4` | `CouncilAsAJudge` judge model |
+| `chairman_model` | `string` | `gpt-5.1` | `LLMCouncil` chairman model |
+| `multi_agent_collab_prompt` | `boolean` | `true` | Inject the multi-agent collaboration prompt |
+| `list_all_agents` | `boolean` | `false` | List all agents and their descriptions to one another |
+| `director_model_name` | `string` | `gpt-5.4` | Director/overseer model (e.g. `HierarchicalSwarm`) |
+| `director_settings` | `object` | — | Director hyperparameters (`temperature`, `top_p`, `max_tokens`, …) |
+
+The `swarm_type` enum: `AgentRearrange`, `MixtureOfAgents`, `SequentialWorkflow`, `ConcurrentWorkflow`, `GroupChat`, `MultiAgentRouter`, `HierarchicalSwarm`, `auto`, `MajorityVoting`, `CouncilAsAJudge`, `HeavySwarm`, `BatchedGridWorkflow`, `LLMCouncil`, `DebateWithJudge`, `RoundRobin`, `PlannerWorkerSwarm`.
+
+## Response
+
+**200** — `SwarmCompletion`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job_id` | `string` | Unique identifier for the swarm completion |
+| `status` | `string` | Status of the completion |
+| `swarm_name` | `string` | Name of the swarm |
+| `description` | `string` | Description of the swarm |
+| `swarm_type` | `string` | Type of the swarm |
+| `output` | `any` | Output of the swarm (string, array, or object) |
+| `number_of_agents` | `integer` | Number of agents in the swarm |
+| `execution_time` | `number` | Execution time in seconds |
+| `usage` | `object` | Token counts and costs |
+
+## Example
+
+```bash
+curl -X POST https://api.swarms.world/v1/swarm/completions \
+  -H "x-api-key: $SWARMS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Research Team",
+    "description": "Multi-agent research swarm",
+    "swarm_type": "MixtureOfAgents",
+    "task": "Analyze the impact of AI on healthcare",
+    "agents": [
+      {
+        "agent_name": "Research Analyst",
+        "description": "Conducts comprehensive research",
+        "system_prompt": "You are a research analyst specializing in healthcare technology.",
+        "model_name": "gpt-4.1",
+        "max_loops": 1,
+        "temperature": 0.3
+      }
+    ],
+    "max_loops": 1
+  }'
+```
+
+```json
+{
+  "job_id": "swarm-12345",
+  "status": "success",
+  "swarm_name": "Research Team",
+  "description": "Multi-agent research swarm",
+  "swarm_type": "MixtureOfAgents",
+  "output": "Artificial intelligence is reshaping healthcare through...",
+  "number_of_agents": 1,
+  "execution_time": 4.2,
+  "usage": { "input_tokens": 320, "output_tokens": 640, "total_tokens": 960, "total_cost": 0.0125 }
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 403 | Premium-only model or feature requested on the free tier |
+| 422 | Schema validation failure |
+| 429 | Rate limit exceeded |
+| 500 | Server-side processing error |
+
+## See also
+
+- [Swarm types](/docs/getting-started/swarm-types) — architecture reference and tuning parameters.
+- [Available swarm types](/docs/reference/swarms-available) — live metadata via the API.

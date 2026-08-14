@@ -1,0 +1,82 @@
+# Rate limits
+
+Retrieve current rate limit status and usage statistics for the authenticated
+user across multiple time windows.
+
+## Endpoint
+
+`GET /v1/rate/limits`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `RateLimitsOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | `boolean` | Whether the request succeeded |
+| `rate_limits` | `RateLimitsInfo` | Current usage per time window |
+| `limits` | `RateLimitLimits` | Configured limits for your tier |
+| `tier` | `string` | Current subscription tier (`free` or `premium`) |
+| `timestamp` | `string` | ISO timestamp when the information was retrieved |
+
+### RateLimitsInfo
+
+Per-window `RateLimitWindow` objects for `minute`, `hour`, and `day`:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `count` | `integer` | Requests made in this window |
+| `limit` | `integer` | Maximum requests allowed in this window |
+| `exceeded` | `boolean` | Whether the limit has been exceeded |
+| `remaining` | `integer` | Requests remaining before the limit |
+| `reset_time` | `string` | ISO timestamp when the window resets |
+
+### RateLimitLimits
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `maximum_requests_per_minute` | `integer` | Max requests per minute |
+| `maximum_requests_per_hour` | `integer` | Max requests per hour |
+| `maximum_requests_per_day` | `integer` | Max requests per day |
+| `tokens_per_agent` | `integer` | Max tokens per agent |
+
+## Example
+
+```bash
+curl -H "x-api-key: your-api-key" \
+     https://api.swarms.world/v1/rate/limits
+```
+
+```json
+{
+  "success": true,
+  "rate_limits": {
+    "minute": { "count": 5, "limit": 100, "exceeded": false, "remaining": 95, "reset_time": "2026-08-14T19:12:00Z" },
+    "hour": { "count": 25, "limit": 350, "exceeded": false, "remaining": 325, "reset_time": "2026-08-14T20:00:00Z" },
+    "day": { "count": 150, "limit": 1200, "exceeded": false, "remaining": 1050, "reset_time": "2026-08-15T19:11:00Z" }
+  },
+  "limits": {
+    "maximum_requests_per_minute": 100,
+    "maximum_requests_per_hour": 350,
+    "maximum_requests_per_day": 1200,
+    "tokens_per_agent": 200000
+  },
+  "tier": "free",
+  "timestamp": "2026-08-14T19:11:30Z"
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |
+| 429 | Rate limit exceeded (the response itself carries `X-RateLimit-*` headers) |
+
+## See also
+
+- [Rate limits](/docs/resources/rate-limits) — tiers, windows, and how limiting works.
+- [Rate limit headers](/docs/resources/rate-limit-headers) — track usage without an extra call.

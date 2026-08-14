@@ -1,0 +1,116 @@
+# Usage report
+
+> There is no dedicated endpoint that returns a historical, day-by-day breakdown
+> of your spend. The Swarms API exposes the **current pricing model** via
+> `GET /v1/usage/costs`, plus a handful of related endpoints for checking your
+> balance and activity (see [Related endpoints](#related-endpoints)).
+
+The Usage endpoint returns the unified pricing model the API uses to calculate
+costs for every operation (token costs, agent costs, search/scrape costs, and
+the night-time discount). Use it to compute expected costs before you run a
+request, or to keep your own cost estimates in sync with live pricing.
+
+## Endpoint
+
+`GET /v1/usage/costs`
+
+**Authentication:** Required — `x-api-key` header
+
+## Query parameters
+
+None. This endpoint always returns the current pricing model in effect.
+
+## Response — `PricingDetailsOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `usage_pricing` | `object` | All per-operation costs |
+| `timestamp` | `string` | ISO timestamp when the pricing was retrieved |
+
+### usage_pricing
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `swarm_completions_agent_cost` | `number` | Cost per agent in swarm completions (USD) |
+| `swarm_completions_input_cost_per_1m` | `number` | Cost per 1M input tokens for swarm completions |
+| `swarm_completions_output_cost_per_1m` | `number` | Cost per 1M output tokens for swarm completions |
+| `agent_completions_input_cost_per_1m` | `number` | Cost per 1M input tokens for agent completions |
+| `agent_completions_output_cost_per_1m` | `number` | Cost per 1M output tokens for agent completions |
+| `agent_completions_img_cost` | `number` | Cost per image for agent completions |
+| `agent_completions_mcp_cost` | `number` | Cost per MCP call |
+| `search_cost` | `number` | Cost per search operation |
+| `scrape_cost` | `number` | Cost per scrape operation |
+| `night_time_discount` | `number` | Discount multiplier (0.5 = 50% off), 8 PM – 6 AM PT |
+
+## Example
+
+```python
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("SWARMS_API_KEY")
+BASE_URL = "https://api.swarms.world"
+
+headers = {"x-api-key": API_KEY, "Content-Type": "application/json"}
+
+response = requests.get(f"{BASE_URL}/v1/usage/costs", headers=headers)
+data = response.json()
+
+pricing = data["usage_pricing"]
+print(f"Agent completions input cost: ${pricing['agent_completions_input_cost_per_1m']} / 1M tokens")
+print(f"Agent completions output cost: ${pricing['agent_completions_output_cost_per_1m']} / 1M tokens")
+```
+
+```bash
+curl -X GET "https://api.swarms.world/v1/usage/costs" \
+  -H "x-api-key: $SWARMS_API_KEY"
+```
+
+```json
+{
+  "usage_pricing": {
+    "swarm_completions_agent_cost": 0.01,
+    "swarm_completions_input_cost_per_1m": 6.5,
+    "swarm_completions_output_cost_per_1m": 18.5,
+    "agent_completions_input_cost_per_1m": 6.5,
+    "agent_completions_output_cost_per_1m": 18.5,
+    "agent_completions_img_cost": 0.25,
+    "agent_completions_mcp_cost": 0.1,
+    "search_cost": 0.04,
+    "scrape_cost": 0.15,
+    "night_time_discount": 0.5
+  },
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+## Errors
+
+| HTTP status | Cause |
+|---|---|
+| 401 | Missing or invalid API key |
+| 429 | Rate limit exceeded |
+| 500 | Internal error retrieving pricing information |
+
+## Related endpoints
+
+| Need | Endpoint | Returns |
+|------|----------|---------|
+| Current credit balance | `GET /v1/account/credits` | `credit`, `free_credit`, `referral_credits`, `total_credits` |
+| Lifetime/recent completion counts | `GET /v1/metrics/summary` | Unique agents used, lifetime and successful completions, completions in the last 24h/7d |
+| Raw request history | `GET /v1/swarm/logs` | All logged API requests, which you can aggregate client-side |
+| Current rate limit usage | `GET /v1/rate/limits` | Requests used/remaining per minute, hour, and day |
+
+> **Note:** Billable completion endpoints require your `total_credits` balance to
+> be above **$1.00**, checked before the request runs. If the balance is at or
+> below the minimum, the API returns a **402 Payment Required** error without
+> doing any work. Use `GET /v1/account/credits` to monitor your balance.
+
+## See also
+
+- [Pricing](/docs/resources/pricing) — plans and cost notes.
+- [Pricing endpoint](/docs/reference/usage-costs) — API reference.
+- [Credit balance endpoint](/docs/reference/account-credits) — check your balance.

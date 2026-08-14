@@ -1,0 +1,203 @@
+# Python client
+
+The official Python client library for the Swarms API, with comprehensive
+features and examples.
+
+## Features
+
+- **Type safety** — full type definitions for all request params and response fields
+- **Dual clients** — both synchronous and asynchronous clients powered by httpx
+- **Comprehensive coverage** — access to all Swarms API endpoints
+- **Modern Python** — built for Python 3.8+ with async/await support
+- **Environment integration** — seamless `.env` file support for API keys
+
+## Installation
+
+```bash
+pip install swarms-client
+```
+
+## Environment setup
+
+Create a `.env` file in your project root:
+
+```bash
+SWARMS_API_KEY=your_api_key_here
+```
+
+## Quick start
+
+```python
+import os
+from swarms_client import SwarmsClient
+from dotenv import load_dotenv
+
+load_dotenv()
+
+client = SwarmsClient(
+    api_key=os.getenv("SWARMS_API_KEY"),
+)
+```
+
+### Your first swarm
+
+```python
+response = client.swarms.run(
+    name="Medical Analysis Swarm",
+    description="A swarm that analyzes patient symptoms and provides ICD codes",
+    swarm_type="ConcurrentWorkflow",
+    task="Analyze the following patient symptoms and provide ICD code recommendations",
+    agents=[
+        {
+            "agent_name": "Symptom Analyzer",
+            "description": "Analyzes patient symptoms and identifies key indicators",
+            "system_prompt": "You are a medical expert. Analyze symptoms and identify key medical indicators.",
+            "model_name": "gpt-4.1",
+            "role": "worker",
+            "max_loops": 1,
+            "max_tokens": 8192,
+            "temperature": 0.3,
+        }
+    ],
+)
+
+print(response)
+```
+
+## Client configuration
+
+```python
+# Environment variable (automatically uses SWARMS_API_KEY)
+client = SwarmsClient()
+
+# Direct API key
+client = SwarmsClient(api_key="your_api_key_here")
+
+# Custom configuration
+client = SwarmsClient(
+    api_key=os.getenv("SWARMS_API_KEY"),
+    base_url="https://api.swarms.world",  # Optional custom base URL
+    timeout=30.0,  # Request timeout in seconds
+)
+```
+
+## Core operations
+
+```python
+# Create and run a swarm
+swarm_response = client.swarms.run(
+    name="Data Analysis Swarm",
+    description="Analyzes complex datasets",
+    swarm_type="SequentialWorkflow",
+    task="Analyze the sales data for Q4",
+    agents=[...],
+)
+
+# Get swarm logs
+logs = client.swarms.get_logs()
+
+# Check available swarms
+available = client.swarms.check_available()
+
+# List available models
+models = client.models.list_available()
+
+# Check API health
+health_status = client.health.check()
+
+# Get rate limits
+rate_limits = client.client.rate.get_limits()
+
+print(health_status)
+print(rate_limits)
+```
+
+## Asynchronous operations
+
+```python
+import asyncio
+import os
+from swarms_client import AsyncSwarmsClient
+
+async def main():
+    client = AsyncSwarmsClient(api_key=os.getenv("SWARMS_API_KEY"))
+
+    # Run multiple operations concurrently
+    results = await asyncio.gather(
+        client.swarms.run(
+            name="Task 1",
+            swarm_type="ConcurrentWorkflow",
+            task="Analyze customer feedback for Q1",
+            agents=[
+                {
+                    "agent_name": "Feedback Analyst",
+                    "system_prompt": "You analyze customer feedback and summarize key themes.",
+                    "model_name": "gpt-4.1",
+                }
+            ],
+        ),
+        client.swarms.run(
+            name="Task 2",
+            swarm_type="ConcurrentWorkflow",
+            task="Generate a monthly report summary",
+            agents=[
+                {
+                    "agent_name": "Report Writer",
+                    "system_prompt": "You write concise executive report summaries.",
+                    "model_name": "gpt-4.1",
+                }
+            ],
+        ),
+        client.models.list_available(),
+    )
+    return results
+
+results = asyncio.run(main())
+```
+
+## Single agent completions
+
+```python
+result = client.agent.run(
+    agent_config={
+        "agent_name": "Bloodwork Diagnosis Expert",
+        "description": "An expert doctor specializing in interpreting and diagnosing blood work results.",
+        "system_prompt": "You are an expert medical doctor specializing in the interpretation and diagnosis of blood work.",
+        "model_name": "gpt-4.1",
+        "max_loops": 1,
+        "max_tokens": 1000,
+        "temperature": 0.5,
+    },
+    task="Interpret the provided blood work results and recommend next steps.",
+)
+```
+
+## Helper methods
+
+```python
+# Quick health check
+if client.health.check()["status"] == "ok":
+    print("API is healthy!")
+
+# Get available models with formatting
+models = client.models.list_available()
+print(f"Available models: {models['count']}")
+
+# Check rate limits
+limits = client.client.rate.get_limits()
+minute = limits["rate_limits"]["minute"]
+print(f"Current usage (last minute): {minute['count']}/{minute['limit']}")
+print(f"Tier: {limits['tier']}")
+```
+
+## Troubleshooting
+
+1. **API key errors** — ensure your API key is valid and properly set in environment variables.
+2. **Rate limiting** — check rate limits with `client.client.rate.get_limits()`.
+3. **Network issues** — verify your internet connection and firewall settings.
+4. **Model availability** — use `client.models.list_available()` to check available models.
+
+## Getting help
+
+- **GitHub:** [swarms-client repository](https://github.com/The-Swarm-Corporation/swarms-client)
+- **Support:** [technical support](/docs/resources/technical-support)

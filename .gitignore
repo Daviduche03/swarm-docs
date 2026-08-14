@@ -5,3 +5,6 @@ dist/
 docs.md
 spec.json
 sdk.md
+opencode.json
+.opencode/
+mintlify-source/

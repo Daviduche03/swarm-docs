@@ -1,0 +1,107 @@
+# Graph workflow completions
+
+Execute a graph workflow with directed agent nodes and edges. Enables complex
+multi-agent collaboration with parallel execution, automatic compilation, and
+comprehensive workflow orchestration.
+
+> **Premium tier required:** This endpoint is available only on Pro, Ultra, and Premium plans. [Upgrade your account](https://swarms.world/platform/account).
+
+## Endpoint
+
+`POST /v1/graph-workflow/completions`
+
+**Authentication:** Required — `x-api-key` header
+**Rate limiting:** Subject to tier-based rate limits
+
+## Request body — `GraphWorkflowInput`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | `string` | — | Name of the graph workflow |
+| `description` | `string` | — | Description of the workflow |
+| `agents` | `array[AgentSpec]` | — | Agent specifications used as nodes in the graph |
+| `edges` | `array[EdgeSpec]` \| `array[object]` | — | Edges connecting nodes; `EdgeSpec` objects or dictionaries with `source` and `target` keys |
+| `entry_points` | `array[string]` | — | Node IDs that serve as starting points |
+| `end_points` | `array[string]` | — | Node IDs that serve as ending points |
+| `max_loops` | `integer` | `1` | Maximum number of execution loops |
+| `task` | `string` | — | The task to be executed by the workflow |
+| `img` | `string` | — | Optional image path for vision-enabled agents |
+| `auto_compile` | `boolean` | `true` | Automatically compile the workflow for optimization |
+| `verbose` | `boolean` | `false` | Enable detailed logging |
+
+### EdgeSpec
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `source` | `string` | Yes | The source node ID |
+| `target` | `string` | Yes | The target node ID |
+| `metadata` | `object` | No | Optional edge metadata |
+
+## Response
+
+**200** — `GraphWorkflowOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job_id` | `string` | Job ID of the graph workflow |
+| `name` | `string` | Name of the workflow |
+| `description` | `string` | Description of the workflow |
+| `status` | `string` | Status of the workflow |
+| `outputs` | `any` | Outputs of the workflow |
+| `usage` | `object` | Usage statistics: `input_tokens`, `output_tokens`, `total_tokens`, `token_cost`, `cost_per_agent` |
+| `timestamp` | `string` | Timestamp of the execution |
+
+## Example
+
+```bash
+curl -X POST https://api.swarms.world/v1/graph-workflow/completions \
+  -H "x-api-key: $SWARMS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Research → Write Pipeline",
+    "description": "A two-stage graph workflow",
+    "agents": [
+      {
+        "agent_name": "Researcher",
+        "description": "Gathers and analyzes research",
+        "system_prompt": "You are a research specialist.",
+        "model_name": "gpt-4.1",
+        "role": "researcher"
+      },
+      {
+        "agent_name": "Writer",
+        "description": "Synthesizes findings into prose",
+        "system_prompt": "You are a technical writer.",
+        "model_name": "gpt-4.1",
+        "role": "writer"
+      }
+    ],
+    "edges": [
+      { "source": "Researcher", "target": "Writer" }
+    ],
+    "entry_points": ["Researcher"],
+    "end_points": ["Writer"],
+    "task": "Write a report on renewable energy adoption trends"
+  }'
+```
+
+```json
+{
+  "job_id": "graph-abc123",
+  "name": "Research → Write Pipeline",
+  "description": "A two-stage graph workflow",
+  "status": "success",
+  "outputs": { "Writer": "Renewable energy adoption grew 18% year over year..." },
+  "usage": { "input_tokens": 900, "output_tokens": 450, "total_tokens": 1350, "token_cost": 0.014, "cost_per_agent": 0.01 },
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 403 | Free tier account (premium endpoint) |
+| 422 | Schema validation failure |
+| 429 | Rate limit exceeded |

@@ -1,0 +1,150 @@
+# API architecture
+
+The Swarms API provides a comprehensive multi-tier architecture for building
+intelligent AI systems. The platform is designed around three distinct agent
+paradigms, each optimized for different types of tasks and complexity levels.
+
+| Tier | Name | Agent count | Complexity | Primary use | API endpoint |
+|------|------|-------------|------------|-------------|--------------|
+| **Tier 1** | Individual agents | 1 | Low–Medium | Focused tasks (content generation, data analysis, Q&A) | `/v1/agent/completions` |
+| **Tier 2** | Reasoning agents | 1–2 (internal) | Medium–High | Complex reasoning (proofs, validation, research) | `/v1/reasoning-agent/completions` |
+| **Tier 3** | Multi-agent swarms | 3–10,000+ | High | Enterprise workflows and large-scale systems | `/v1/swarm/completions` |
+
+## Tier 1: Individual agents
+
+Single-purpose AI agents designed to handle specific tasks with high precision
+and efficiency.
+
+**Key characteristics**
+
+- One AI model per agent
+- Specialized for specific tasks
+- Full control over system prompts, tools, and behavior
+- Optimized for direct task execution
+- Can be combined into larger systems
+
+**Example**
+
+```python
+import requests
+
+payload = {
+    "agent_config": {
+        "agent_name": "content-writer",
+        "description": "Professional content writer for technical articles",
+        "system_prompt": "You are an expert technical writer...",
+        "model_name": "gpt-4.1",
+        "max_tokens": 4000,
+        "temperature": 0.7,
+    },
+    "task": "Write a comprehensive guide on API security best practices",
+}
+
+response = requests.post(
+    "https://api.swarms.world/v1/agent/completions",
+    headers={"x-api-key": "your-api-key"},
+    json=payload,
+)
+```
+
+## Tier 2: Reasoning agents
+
+> **Premium tier required:** `/v1/reasoning-agent/completions` is available only on Pro, Ultra, and Premium plans. [Upgrade your account](https://swarms.world/platform/account).
+
+Reasoning agents leverage sophisticated reasoning techniques for problems that
+require deep analysis, multiple perspectives, and systematic thinking. They may
+internally use 1–2 specialized sub-agents to achieve their reasoning goals.
+
+**Available reasoning agent types**
+
+| Agent type | Description | Best for |
+|------------|-------------|----------|
+| `reasoning-duo` | Dual-agent system with perspective synthesis | Mathematical problems, logical proofs |
+| `self-consistency` | Multiple reasoning paths with validation | Complex logical problems, consistency checking |
+| `ire` | Iterative refinement approach | Complex analysis, research problems |
+| `ire-agent` | Iterative refinement (agent variant) | Complex analysis, research problems |
+| `reasoning-agent` | General-purpose systematic reasoning | Step-by-step problem solving |
+| `consistency-agent` | Logical consistency and contradiction detection | Argument validation |
+| `ReflexionAgent` | Self-reflection and bias detection | Meta-cognitive tasks |
+| `GKPAgent` | Cross-domain knowledge synthesis | Interdisciplinary problems |
+| `AgentJudge` | Evaluates and judges agent outputs | Quality assessment, evaluation tasks |
+
+**Example**
+
+```python
+payload = {
+    "agent_name": "math-reasoner",
+    "description": "Mathematical problem solver using dual perspectives",
+    "model_name": "claude-sonnet-4-20250514",
+    "system_prompt": "You are an expert mathematical reasoning agent...",
+    "max_loops": 1,
+    "swarm_type": "reasoning-duo",
+    "task": "Prove that the sum of any three consecutive integers is divisible by 3",
+}
+
+response = requests.post(
+    "https://api.swarms.world/v1/reasoning-agent/completions",
+    headers={"x-api-key": "your-api-key"},
+    json=payload,
+)
+```
+
+## Tier 3: Multi-agent swarms
+
+The most sophisticated tier: anywhere from 3 to 10,000+ agents working together
+in coordinated workflows, built for enterprise-scale applications.
+
+**Key characteristics**
+
+- 3 to 10,000+ agents per swarm
+- Agents work together in structured processes
+- 16+ different swarm architectures available
+- Dynamic task distribution and agent selection
+
+**Example**
+
+```python
+payload = {
+    "name": "Enterprise Content Pipeline",
+    "description": "Multi-stage content creation and review system",
+    "agents": [
+        {"agent_name": "researcher", "description": "Research and gather information", "model_name": "gpt-4.1", "role": "researcher"},
+        {"agent_name": "writer", "description": "Create initial content", "model_name": "claude-sonnet-4-20250514", "role": "writer"},
+        {"agent_name": "editor", "description": "Review and improve content", "model_name": "gpt-4.1", "role": "editor"},
+        {"agent_name": "fact-checker", "description": "Verify accuracy and sources", "model_name": "claude-sonnet-4-20250514", "role": "validator"},
+    ],
+    "max_loops": 1,
+    "swarm_type": "SequentialWorkflow",
+    "task": "Create a comprehensive industry report on AI trends in 2024",
+}
+
+response = requests.post(
+    "https://api.swarms.world/v1/swarm/completions",
+    headers={"x-api-key": "your-api-key"},
+    json=payload,
+)
+```
+
+## Choosing the right architecture
+
+| Aspect | Individual agents | Reasoning agents | Multi-agent swarms |
+|--------|-------------------|------------------|--------------------|
+| Agent count | 1 | 1–2 (internal) | 3–10,000+ |
+| Complexity | Low–Medium | Medium–High | High–Extreme |
+| Use case | Focused tasks | Complex reasoning | Enterprise workflows |
+| Setup time | Minutes | Minutes–Hours | Hours–Days |
+| Resource usage | Low | Medium | High |
+| Scalability | Individual | Limited | Massive |
+| Cost | Low | Medium | High |
+
+- **Use individual agents** for single, well-defined tasks; quick prototyping; resource-constrained environments; and simple automation needs.
+- **Use reasoning agents** for complex problem-solving, multi-perspective analysis, logical consistency validation, and iterative improvement.
+- **Use multi-agent swarms** for complex business processes, large-scale automation, multi-step workflows, and tasks requiring multiple areas of expertise.
+
+## Integration patterns
+
+You can combine tiers for optimal results:
+
+1. **Individual + reasoning** — individual agents for data collection, reasoning agents for analysis.
+2. **Reasoning + swarms** — reasoning agents within swarms for complex decision-making.
+3. **All three tiers** — individual agents for data processing, reasoning agents for analysis, swarms for orchestration.

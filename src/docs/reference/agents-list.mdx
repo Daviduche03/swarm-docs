@@ -1,0 +1,56 @@
+# List agent configurations
+
+Retrieve all unique agent configurations that the user has created or used,
+without task-specific details. Enables reuse of agent configurations across
+different tasks.
+
+## Endpoint
+
+`GET /v1/agents/list`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `AgentsListOutput`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `success` | `boolean` | No | Whether the list was retrieved successfully |
+| `count` | `integer` | Yes | Total number of unique agent configurations |
+| `agents` | `array[object]` | Yes | List of agent configuration objects |
+| `timestamp` | `string` | Yes | ISO timestamp when the list was generated |
+
+## Example
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" \
+     https://api.swarms.world/v1/agents/list
+```
+
+```json
+{
+  "success": true,
+  "count": 2,
+  "agents": [
+    {
+      "agent_name": "Research Analyst",
+      "description": "Expert in analyzing and synthesizing research data",
+      "model_name": "gpt-4.1-mini"
+    },
+    {
+      "agent_name": "Invoice Extractor",
+      "description": "Extracts structured invoice data",
+      "model_name": "gpt-4o"
+    }
+  ],
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |

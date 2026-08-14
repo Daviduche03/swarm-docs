@@ -1,0 +1,51 @@
+# Metrics summary
+
+Retrieve a summary of the authenticated user's core usage metrics, including
+unique agents used, lifetime completion calls, successful completions, and
+recent-window completion counts.
+
+## Endpoint
+
+`GET /v1/metrics/summary`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `MetricsSummaryOutput`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `success` | `boolean` | No | Whether the summary was retrieved successfully |
+| `unique_agents` | `integer` | Yes | Number of unique agent configurations used |
+| `total_completion_calls` | `integer` | Yes | Lifetime count of completion calls |
+| `successful_completions` | `integer` | Yes | Lifetime count of completions with status `success` |
+| `completions_last_24h` | `integer` | Yes | Completion calls in the last 24 hours |
+| `completions_last_7d` | `integer` | Yes | Completion calls in the last 7 days |
+| `timestamp` | `string` | Yes | ISO timestamp when the summary was generated |
+
+## Example
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" \
+     https://api.swarms.world/v1/metrics/summary
+```
+
+```json
+{
+  "success": true,
+  "unique_agents": 5,
+  "total_completion_calls": 124,
+  "successful_completions": 118,
+  "completions_last_24h": 12,
+  "completions_last_7d": 89,
+  "timestamp": "2026-08-14T19:11:02.018760+00:00"
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |

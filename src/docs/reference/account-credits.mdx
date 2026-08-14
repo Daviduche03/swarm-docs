@@ -1,0 +1,48 @@
+# Credit balance
+
+Retrieve the current API credit balance for the authenticated user.
+
+## Endpoint
+
+`GET /v1/account/credits`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `CreditBalanceOutput`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `credit` | `number` | Yes | Regular credit balance |
+| `free_credit` | `number` | Yes | Free credit balance |
+| `referral_credits` | `number` | Yes | Referral credits balance |
+| `total_credits` | `number` | Yes | Total available credits (sum of all types) |
+
+## Example
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" \
+     https://api.swarms.world/v1/account/credits
+```
+
+```json
+{
+  "credit": 10.5,
+  "free_credit": 20.0,
+  "referral_credits": 5.0,
+  "total_credits": 35.5
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |
+
+> **Note:** Billable completion endpoints require your `total_credits` balance to
+> be above **$1.00**, checked before the request runs. If the balance is at or
+> below the minimum, the API returns a **402 Payment Required** error without
+> doing any work. Use this endpoint to monitor your balance.

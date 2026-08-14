@@ -1,78 +1,252 @@
 {
-  "baseUrl": "https://api.example.com",
-  "proxyUrl": "https://hot-wasp.outray.app/api/proxy",
+  "baseUrl": "https://api.swarms.world",
   "endpoints": [
     {
       "method": "GET",
-      "path": "/api/v1/customers",
-      "summary": "List customers",
-      "operationId": "listCustomers",
-      "params": [
-        { "name": "pageSize", "in": "query", "type": "number", "required": false },
-        { "name": "cursor", "in": "query", "type": "string", "required": false }
-      ],
+      "path": "/",
+      "summary": "API root",
+      "operationId": "root__get",
+      "params": [],
       "requestBody": null,
-      "responses": [{ "status": "200", "schema": "{ data: Customer[], meta }" }],
-      "auth": "customers.read"
+      "responses": [{ "status": "200", "schema": "object" }],
+      "auth": null
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "summary": "Health check",
+      "operationId": "health_health_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "HealthOutput { status }" }],
+      "auth": null
+    },
+    {
+      "method": "GET",
+      "path": "/v1/swarms/available",
+      "summary": "Get available swarm types",
+      "operationId": "check_swarm_types_v1_swarms_available_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "SwarmTypesOutput" }],
+      "auth": "x-api-key"
     },
     {
       "method": "POST",
-      "path": "/api/v1/customers",
-      "summary": "Create or upsert a customer",
-      "operationId": "createCustomer",
+      "path": "/v1/swarm/completions",
+      "summary": "Execute swarm completion",
+      "operationId": "run_swarm_v1_swarm_completions_post",
       "params": [],
       "requestBody": {
         "contentType": "application/json",
-        "schema": "{ name, email?, phone?, country? }"
+        "schema": "{ name?, description?, agents?: AgentSpec[], max_loops?, swarm_type?, task?, tasks?, stream?, ... }"
       },
-      "responses": [{ "status": "200", "schema": "Customer" }],
-      "auth": "customers.write"
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/customers/:id",
-      "summary": "Get a customer",
-      "operationId": "getCustomer",
-      "params": [{ "name": "id", "in": "path", "type": "string", "required": true }],
-      "requestBody": null,
-      "responses": [{ "status": "200", "schema": "Customer" }],
-      "auth": "customers.read"
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/invoices",
-      "summary": "List invoices",
-      "operationId": "listInvoices",
-      "params": [
-        { "name": "pageSize", "in": "query", "type": "number", "required": false },
-        { "name": "status", "in": "query", "type": "string", "required": false }
-      ],
-      "requestBody": null,
-      "responses": [{ "status": "200", "schema": "{ data: Invoice[], meta }" }],
-      "auth": "invoices.read"
+      "responses": [{ "status": "200", "schema": "SwarmCompletion" }],
+      "auth": "x-api-key"
     },
     {
       "method": "POST",
-      "path": "/api/v1/invoices",
-      "summary": "Create an invoice",
-      "operationId": "createInvoice",
+      "path": "/v1/chat/completions",
+      "summary": "Chat completions (OpenAI-compatible)",
+      "operationId": "chat_completions_v1_chat_completions_post",
       "params": [],
       "requestBody": {
         "contentType": "application/json",
-        "schema": "{ customerId, amount, currency?, dueDate? }"
+        "schema": "{ model, messages: ChatMessage[], temperature?, max_tokens?, stream?, max_loops? }"
       },
-      "responses": [{ "status": "201", "schema": "Invoice" }],
-      "auth": "invoices.write"
+      "responses": [{ "status": "200", "schema": "ChatCompletionResponse" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/agent/completions",
+      "summary": "Execute agent completion",
+      "operationId": "run_agent_v1_agent_completions_post",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ agent_config: AgentSpec, task?, history?, img?, imgs?, tools_enabled? }"
+      },
+      "responses": [{ "status": "200", "schema": "AgentCompletionOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/agent/batch/completions",
+      "summary": "Execute batch agent completions (premium)",
+      "operationId": "run_agent_batch_v1_agent_batch_completions_post",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "AgentCompletion[] (max 10)"
+      },
+      "responses": [{ "status": "200", "schema": "AgentBatchCompletionResponse" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/swarm/batch/completions",
+      "summary": "Execute batch swarm completions (premium)",
+      "operationId": "run_batch_completions_v1_swarm_batch_completions_post",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "SwarmSpec[] (max 50)"
+      },
+      "responses": [{ "status": "200", "schema": "SwarmBatchCompletionOutput[]" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/reasoning-agent/completions",
+      "summary": "Execute reasoning agent completion (premium)",
+      "operationId": "run_reasoning_agent_completions_v1_reasoning_agent_completions_post",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ agent_name?, description?, model_name?, system_prompt?, max_loops?, swarm_type?, task?, ... }"
+      },
+      "responses": [{ "status": "200", "schema": "ReasoningAgentCompletionOutput" }],
+      "auth": "x-api-key"
     },
     {
       "method": "GET",
-      "path": "/api/v1/transactions",
-      "summary": "List transactions",
-      "operationId": "listTransactions",
-      "params": [{ "name": "pageSize", "in": "query", "type": "number", "required": false }],
+      "path": "/v1/reasoning-agent/types",
+      "summary": "Get reasoning agent types",
+      "operationId": "get_reasoning_agent_types_v1_reasoning_agent_types_get",
+      "params": [],
       "requestBody": null,
-      "responses": [{ "status": "200", "schema": "{ data: Transaction[], meta }" }],
-      "auth": "transactions.read"
+      "responses": [{ "status": "200", "schema": "ReasoningAgentTypesOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/swarm/logs",
+      "summary": "Get API request logs",
+      "operationId": "get_logs_v1_swarm_logs_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "SwarmLogsOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/agents/list",
+      "summary": "List agent configurations",
+      "operationId": "list_agents_v1_agents_list_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "AgentsListOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/metrics/summary",
+      "summary": "Get user metrics summary",
+      "operationId": "get_metrics_summary_v1_metrics_summary_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "MetricsSummaryOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/models/available",
+      "summary": "Get available AI models",
+      "operationId": "get_available_models_v1_models_available_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "ModelsAvailableOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/models",
+      "summary": "List models (OpenAI-compatible)",
+      "operationId": "list_models_v1_models_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "ModelListResponse" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/rate/limits",
+      "summary": "Get rate limits and usage",
+      "operationId": "get_rate_limits_v1_rate_limits_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "RateLimitsOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/tools/available",
+      "summary": "Get available API tools",
+      "operationId": "get_available_tools_v1_tools_available_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "AvailableToolsOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/batched-grid-workflow/completions",
+      "summary": "Execute batched grid workflow (premium)",
+      "operationId": "run_batched_grid_workflow_v1_batched_grid_workflow_completions_post",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ name?, description?, agent_completions?: AgentSpec[], tasks?: string[], max_loops?, imgs? }"
+      },
+      "responses": [{ "status": "200", "schema": "BatchedGridWorkflowOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/graph-workflow/completions",
+      "summary": "Execute graph workflow (premium)",
+      "operationId": "run_graph_workflow_v1_graph_workflow_completions_post",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ name?, description?, agents?: AgentSpec[], edges?, entry_points?, end_points?, task?, auto_compile?, ... }"
+      },
+      "responses": [{ "status": "200", "schema": "GraphWorkflowOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auto-agent-builder/completions",
+      "summary": "Generate agent configurations from a task",
+      "operationId": "run_auto_agent_builder_v1_auto_agent_builder_completions_post",
+      "params": [],
+      "requestBody": {
+        "contentType": "application/json",
+        "schema": "{ task: string, name?, description?, model_name?, max_agents?, num_agents?, system_prompt?, agent_kwargs? }"
+      },
+      "responses": [{ "status": "200", "schema": "AutoAgentBuilderOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/usage/costs",
+      "summary": "Get comprehensive pricing details",
+      "operationId": "usage_costs_v1_usage_costs_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "PricingDetailsOutput" }],
+      "auth": "x-api-key"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/account/credits",
+      "summary": "Credit balance",
+      "operationId": "credit_balance_v1_account_credits_get",
+      "params": [],
+      "requestBody": null,
+      "responses": [{ "status": "200", "schema": "CreditBalanceOutput" }],
+      "auth": "x-api-key"
     }
   ]
 }

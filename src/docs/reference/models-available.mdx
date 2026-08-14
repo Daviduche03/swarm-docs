@@ -1,0 +1,56 @@
+# Available models
+
+Retrieve comprehensive information about all AI models available for use in
+agent and swarm configurations. This is the authoritative, tier-aware catalog —
+call it with your key to see exactly which models you can use.
+
+## Endpoint
+
+`GET /v1/models/available`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `ModelsAvailableOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | `boolean` | Whether the request succeeded |
+| `count` | `integer` | Number of models returned |
+| `models` | `any` | The model catalog (varies by subscription tier) |
+
+## Example
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" \
+     https://api.swarms.world/v1/models/available
+```
+
+```json
+{
+  "success": true,
+  "count": 25,
+  "models": {
+    "openai": ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "o3-mini"],
+    "anthropic": ["claude-sonnet-4-20250514", "claude-3-7-sonnet-latest"],
+    "groq": ["groq/llama3-70b-8192", "groq/deepseek-r1-distill-llama-70b"]
+  }
+}
+```
+
+> The exact shape of `models` varies by tier and catalog version. Premium-only
+> models (e.g. all `groq/*` models and top-tier frontier models) are excluded for
+> free-tier keys.
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |
+
+## See also
+
+- [List models](/docs/reference/models) — standard OpenAI list format.
+- [Quickstart — supported models](/docs/getting-started/quickstart#supported-models).

@@ -1,0 +1,139 @@
+# Response compression
+
+The Swarms API uses intelligent response compression to significantly reduce
+payload sizes and improve response times. Responses are automatically compressed
+when beneficial, reducing bandwidth usage and speeding up data transfer.
+
+The API implements a dynamic compression middleware that automatically compresses
+HTTP responses based on:
+
+- **Response size** — only compresses bodies larger than 500 bytes and no larger than 8 MiB
+- **Client support** — negotiates the algorithm via the `Accept-Encoding` header (including q-values)
+- **Compression efficiency** — only applies compression if it actually reduces the response size
+
+## Supported algorithms
+
+| Algorithm | Server preference | Speed | Compression ratio | Use case |
+|-----------|-------------------|-------|-------------------|----------|
+| **LZ4** | Preferred | Very fast | Good balance | Fastest option for clients that can decode LZ4 frames |
+| **GZip** | Fallback | Moderate (level 6) | Excellent | Universal browser and client support — what most clients receive |
+
+> Standard HTTP clients advertise `gzip` (not `lz4`) by default, so in practice
+> most responses are GZip-compressed. LZ4 is only used when a client explicitly
+> sends `lz4` in `Accept-Encoding` and can decode LZ4 frame data.
+
+## How it works
+
+The compression middleware automatically:
+
+1. **Parses client preferences** — reads `Accept-Encoding`, ordering encodings by q-value. An encoding with `q=0` is excluded; `*` means any encoding is acceptable.
+2. **Selects the algorithm** — walks the client's encodings in preference order and picks the first the server supports. If only `*` matches, the server's preferred order is used (LZ4, then GZip).
+3. **Checks response size** — only compresses bodies larger than 500 bytes and no larger than 8 MiB.
+4. **Validates compression** — only applies if the compressed size is smaller than the original.
+5. **Sets headers** — sets `Content-Encoding`, updates `Content-Length`, and appends `Accept-Encoding` to `Vary`.
+
+## Responses that are never compressed
+
+- **Streaming responses**, including Server-Sent Events (`text/event-stream`)
+- **Already-encoded responses** — anything with a `Content-Encoding` header
+- **Small responses** — bodies of 500 bytes or less
+- **Large responses** — bodies over 8 MiB
+- **Responses where compression doesn't help** — the original is returned
+
+## Client preferences
+
+The API respects client compression preferences through `Accept-Encoding`,
+including q-values:
+
+```bash
+Accept-Encoding: lz4, gzip;q=0.8, br;q=0
+```
+
+This example prefers LZ4, accepts GZip at lower priority, and explicitly refuses
+Brotli (`q=0`). The middleware honors q-value ordering, treats `q=0` as "do not
+use", treats `*` as "any", and returns the response uncompressed if no supported
+encoding is acceptable.
+
+## Usage
+
+Compression works automatically with all API endpoints. Standard clients already
+send `Accept-Encoding: gzip` and decompress transparently:
+
+```bash
+curl --compressed \
+     -H "x-api-key: your-api-key" \
+     https://api.swarms.world/v1/models
+```
+
+**Python (LZ4)** — `requests` does not decompress LZ4, so decode the raw body
+manually:
+
+```python
+import json
+
+import lz4.frame
+import requests
+
+response = requests.post(
+    "https://api.swarms.world/v1/agent/completions",
+    headers={
+        "x-api-key": "your-api-key",
+        "Accept-Encoding": "lz4",
+    },
+    json={
+        "agent_config": {
+            "agent_name": "example",
+            "model_name": "gpt-4o-mini",
+            "max_loops": 1,
+        },
+        "task": "Your task here",
+    },
+    stream=True,
+)
+
+body = response.raw.read()
+if response.headers.get("Content-Encoding") == "lz4":
+    body = lz4.frame.decompress(body)
+
+data = json.loads(body)
+```
+
+## Response headers
+
+Compressed responses include these headers:
+
+```http
+Content-Encoding: gzip
+Content-Length: 1234
+Vary: Accept-Encoding
+```
+
+- **Content-Encoding** — the compression method used (`gzip` or `lz4`)
+- **Content-Length** — updated to the compressed size
+- **Vary** — `Accept-Encoding` appended so caches store separate variants
+
+## Best practices
+
+1. Include an `Accept-Encoding` header (most clients do by default).
+2. Let clients handle decompression — don't manually decompress unless necessary.
+3. Only add `lz4` if your client decodes LZ4 frames (e.g. `Accept-Encoding: lz4, gzip;q=0.8`).
+4. Use modern clients (`requests`, `fetch`, `axios`) that handle compression automatically.
+
+## Client compatibility
+
+| Client | GZip decompression | LZ4 decompression |
+|--------|--------------------|-------------------|
+| Python `requests` | Automatic | Manual (`lz4.frame.decompress`) |
+| JavaScript `fetch` | Automatic | Manual |
+| `curl` | Automatic with `--compressed` | Manual |
+| `axios` | Automatic | Manual |
+| `httpx` | Automatic | Manual |
+
+## Summary
+
+- Reduces bandwidth usage and improves response times.
+- Works transparently with no configuration needed.
+- Supports **LZ4** and **GZip**, preferring LZ4 for speed when the client accepts it.
+- Respects client preferences via `Accept-Encoding`, including q-values.
+- Only compresses when it helps (bodies between 500 bytes and 8 MiB, and only if the result is smaller).
+- Never touches streaming (SSE) or already-encoded responses.

@@ -1,0 +1,87 @@
+# Available swarm types
+
+Retrieve all available swarm types supported by the Swarms API, including rich
+metadata for each architecture.
+
+## Endpoint
+
+`GET /v1/swarms/available`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `SwarmTypesOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `boolean` | Indicates whether the fetch succeeded |
+| `timestamp` | `string` | ISO timestamp of the response |
+| `swarm_types` | `array[string]` | Supported swarm type names |
+| `swarm_types_metadata` | `array[SwarmTypeMetadata]` | Metadata for each type |
+
+### SwarmTypeMetadata
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `swarm_type` | `string` | Identifier to pass in the `swarm_type` field of a swarm request |
+| `name` | `string` | Human-readable display name |
+| `description` | `string` | What the architecture does |
+| `category` | `string` | High-level grouping (`workflow`, `collaboration`, `routing`, `judgment`, `auto`) |
+| `best_for` | `array[string]` | Representative use cases |
+| `parameters` | `array[string]` | SwarmSpec fields that tune this architecture |
+| `documentation_url` | `string` | Link to the architecture's documentation |
+
+## Example
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" \
+     https://api.swarms.world/v1/swarms/available
+```
+
+```json
+{
+  "status": true,
+  "timestamp": "2026-08-14T19:11:02.018760",
+  "swarm_types": [
+    "AgentRearrange",
+    "MixtureOfAgents",
+    "SequentialWorkflow",
+    "ConcurrentWorkflow",
+    "GroupChat",
+    "MultiAgentRouter",
+    "HierarchicalSwarm",
+    "auto",
+    "MajorityVoting",
+    "CouncilAsAJudge",
+    "HeavySwarm",
+    "BatchedGridWorkflow",
+    "LLMCouncil",
+    "DebateWithJudge",
+    "RoundRobin",
+    "PlannerWorkerSwarm"
+  ],
+  "swarm_types_metadata": [
+    {
+      "swarm_type": "SequentialWorkflow",
+      "name": "Sequential Workflow",
+      "description": "Executes tasks in a strict, predefined order.",
+      "category": "workflow",
+      "best_for": ["Process automation", "Step-by-step workflows"],
+      "parameters": [],
+      "documentation_url": null
+    }
+  ]
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |
+
+## See also
+
+- [Swarm types](/docs/getting-started/swarm-types) — human-readable architecture reference.

@@ -1,0 +1,168 @@
+# Rate limit headers
+
+Swarms API responses include `X-RateLimit-*` headers whenever the rate limiter
+runs on the request. These headers let you monitor usage programmatically —
+build retry logic, display quota dashboards, or throttle requests before hitting
+limits.
+
+> Rate limit headers are present on every response where the rate limiter ran,
+> including 429 rejections and `/v1/rate/limits` itself. Errors returned before
+> rate limiting runs (such as 402 insufficient-credit or 403 premium-required
+> rejections from the authentication layer) do not carry these headers.
+
+## Headers
+
+| Header | Type | Description |
+|--------|------|-------------|
+| `X-RateLimit-Limit-Minute` | integer | Maximum requests allowed per minute for your tier |
+| `X-RateLimit-Remaining-Minute` | integer | Requests remaining in the current minute window |
+| `X-RateLimit-Limit-Day` | integer | Maximum requests allowed per day for your tier |
+| `X-RateLimit-Remaining-Day` | integer | Requests remaining in the current day window |
+| `X-RateLimit-Reset` | unix timestamp | When the current minute window resets |
+| `X-RateLimit-Tier` | string | Your current tier: `free` or `premium` |
+| `Retry-After` | integer | Seconds until the rate limit resets. **Only present on 429 responses** |
+
+## Example response headers
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-RateLimit-Limit-Minute: 100
+X-RateLimit-Remaining-Minute: 94
+X-RateLimit-Limit-Day: 1200
+X-RateLimit-Remaining-Day: 1047
+X-RateLimit-Reset: 1713700800
+X-RateLimit-Tier: free
+```
+
+## Example 429 response
+
+```http
+HTTP/1.1 429 Too Many Requests
+Content-Type: application/json
+X-RateLimit-Limit-Minute: 100
+X-RateLimit-Remaining-Minute: 0
+X-RateLimit-Limit-Day: 1200
+X-RateLimit-Remaining-Day: 1100
+X-RateLimit-Reset: 1713700860
+X-RateLimit-Tier: free
+Retry-After: 42
+```
+
+## Limits by tier
+
+| | Free | Premium |
+|--|------|---------|
+| Per minute | 100 | 2,000 |
+| Per hour | 350 | 10,000 |
+| Per day | 1,200 | 100,000 |
+| Tokens per agent | 200,000 | 2,000,000 |
+
+## Reading headers in code
+
+**Python:**
+
+```python
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("SWARMS_API_KEY")
+BASE_URL = "https://api.swarms.world"
+
+headers = {"x-api-key": API_KEY, "Content-Type": "application/json"}
+
+response = requests.post(
+    f"{BASE_URL}/v1/agent/completions",
+    headers=headers,
+    json={
+        "agent_config": {
+            "agent_name": "test",
+            "model_name": "gpt-4o-mini",
+            "system_prompt": "You are helpful.",
+            "max_loops": 1,
+        },
+        "task": "Say hello.",
+    },
+)
+
+remaining = int(response.headers["X-RateLimit-Remaining-Minute"])
+limit = int(response.headers["X-RateLimit-Limit-Minute"])
+tier = response.headers["X-RateLimit-Tier"]
+
+print(f"Tier: {tier} | {remaining}/{limit} requests remaining this minute")
+```
+
+**TypeScript:**
+
+```typescript
+const response = await fetch(`${BASE_URL}/v1/agent/completions`, {
+  method: "POST",
+  headers: { "x-api-key": API_KEY, "Content-Type": "application/json" },
+  body: JSON.stringify({
+    agent_config: { agent_name: "test", model_name: "gpt-4o-mini", system_prompt: "You are helpful.", max_loops: 1 },
+    task: "Say hello.",
+  }),
+});
+
+const remaining = parseInt(response.headers.get("X-RateLimit-Remaining-Minute") ?? "0");
+const limit = parseInt(response.headers.get("X-RateLimit-Limit-Minute") ?? "0");
+const tier = response.headers.get("X-RateLimit-Tier");
+
+console.log(`Tier: ${tier} | ${remaining}/${limit} requests remaining this minute`);
+```
+
+**cURL** — use `-i` to print response headers:
+
+```bash
+curl -i -X POST https://api.swarms.world/v1/agent/completions \
+  -H "x-api-key: $SWARMS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_config": {
+      "agent_name": "test",
+      "model_name": "gpt-4o-mini",
+      "system_prompt": "You are helpful.",
+      "max_loops": 1
+    },
+    "task": "Say hello."
+  }'
+```
+
+## Retry logic
+
+Use the `Retry-After` header to implement automatic retry on 429 responses:
+
+```python
+import time
+import requests
+
+def call_with_retry(url, headers, payload, max_retries=3):
+    for attempt in range(max_retries):
+        response = requests.post(url, headers=headers, json=payload)
+
+        if response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", 60))
+            print(f"Rate limited. Retrying in {retry_after}s...")
+            time.sleep(retry_after)
+            continue
+
+        return response
+
+    raise Exception("Max retries exceeded")
+```
+
+## Best practices
+
+1. **Check `Remaining-Minute` before sending requests** — if it's low, slow down or queue requests.
+2. **Use `Retry-After` on 429s** — don't guess the wait time, the header tells you exactly how long.
+3. **Log your tier** — use `X-RateLimit-Tier` to confirm your account is on the expected plan.
+4. **Build dashboards** — track `Remaining-Day` over time to understand usage patterns.
+
+## See also
+
+- [Rate limits](/docs/resources/rate-limits) — full tiers, windows, and how limiting works.
+- [Pricing](/docs/resources/pricing) — per-operation costs.
+- [Rate limits endpoint](/docs/reference/rate-limits) — check usage via the API.

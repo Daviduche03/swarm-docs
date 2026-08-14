@@ -1,0 +1,59 @@
+# Available tools
+
+Retrieve comprehensive information about all available tools and capabilities
+supported by the Swarms API.
+
+## Endpoint
+
+`GET /v1/tools/available`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `AvailableToolsOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `string` | Status of the request (default `"success"`) |
+| `tools` | `array[string]` | The list of available tools |
+
+## Example
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" \
+     https://api.swarms.world/v1/tools/available
+```
+
+```json
+{
+  "status": "success",
+  "tools": [
+    "auto_search",
+    "web_scraper",
+    "create_plan",
+    "think",
+    "subtask_done",
+    "complete_task",
+    "respond_to_user",
+    "create_file",
+    "update_file",
+    "read_file",
+    "list_directory",
+    "delete_file",
+    "create_sub_agent",
+    "assign_task"
+  ]
+}
+```
+
+> The list reflects currently enabled tools and may change over time. The
+> `selected_tools` field of `AgentSpec` accepts these names when
+> `max_loops="auto"`.
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |

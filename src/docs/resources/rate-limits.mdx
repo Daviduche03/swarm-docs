@@ -1,0 +1,116 @@
+# Rate limits
+
+The Swarms API implements a comprehensive rate limiting system that tracks API
+requests across multiple time windows and enforces limits to ensure fair usage
+and system stability.
+
+## Rate limits summary
+
+| Rate limit type | Free tier | Premium tier | Time window | Description |
+|-----------------|-----------|--------------|-------------|-------------|
+| Requests per minute | 100 | 2,000 | 1 minute | Maximum completed billable requests per minute |
+| Requests per hour | 350 | 10,000 | 1 hour | Maximum completed billable requests per hour |
+| Requests per day | 1,200 | 100,000 | 24 hours | Maximum completed billable requests per day |
+| Tokens per agent | 200,000 | 2,000,000 | Per request | Maximum tokens per agent |
+| Prompt length | 200,000 | 2,000,000 | Per request | Maximum input tokens (same per-tier limit as tokens per agent) |
+| Batch size | 10 | 10 | Per request | Max tasks per agent batch (`/v1/agent/batch/completions`) |
+| IP-based fallback | 100 | 100 | 60 seconds | For requests without API keys |
+
+## How rate limiting works
+
+The system uses database-based tracking for API key requests:
+
+1. **Request logging** — completed billable work is logged to the `swarms_api_logs` table with the `completion` category.
+2. **Time window queries** — the system counts `completion` rows in the last minute, hour, and day. Telemetry and input rows are deliberately excluded, so GET endpoints and work that never completed do not increment your counters — each completed swarm, agent, or workflow run counts exactly once.
+3. **Limit comparison** — current counts are compared against configured limits.
+4. **Request blocking** — requests are blocked if any limit is exceeded. Limits are enforced on all endpoints, even though only completed billable requests count toward them.
+
+### Sliding windows
+
+Rate limits use sliding windows rather than fixed windows:
+
+- **Minute** — counts requests in the last 60 seconds
+- **Hour** — counts requests in the last 60 minutes
+- **Day** — counts requests in the last 24 hours
+
+## Batch processing limits
+
+> **Premium access required:** batch endpoints (`/v1/agent/batch/completions`, `/v1/swarm/batch/completions`) are available only on Pro, Ultra, and Premium plans. See [Premium endpoints](/docs/resources/premium-endpoints).
+
+- **`/v1/agent/batch/completions`** — 10 agent tasks max per batch. Exceeding it returns a 400 error: `"ERROR: BATCH SIZE EXCEEDED - You can only run up to 10 batch agents at a time."`
+- **`/v1/swarm/batch/completions`** — 50 swarm specs max per batch. Exceeding it returns a 422 error (enforced at the request-validation layer).
+
+## Prompt length errors
+
+If the combined input (task + history + system prompts) exceeds your tier's
+token limit, the API returns a 400 error:
+
+```
+Prompt is too long. Please provide a prompt that is less than 200,000 tokens.
+```
+
+The number in the message reflects your tier.
+
+## Checking your rate limits
+
+Use the `/v1/rate/limits` endpoint to check your current usage:
+
+```bash
+curl -H "x-api-key: your-api-key" \
+     https://api.swarms.world/v1/rate/limits
+```
+
+```json
+{
+  "success": true,
+  "rate_limits": {
+    "minute": { "count": 5, "limit": 100, "exceeded": false, "remaining": 95, "reset_time": "2026-08-14T19:12:00Z" },
+    "hour": { "count": 25, "limit": 350, "exceeded": false, "remaining": 325, "reset_time": "2026-08-14T20:00:00Z" },
+    "day": { "count": 150, "limit": 1200, "exceeded": false, "remaining": 1050, "reset_time": "2026-08-15T19:11:00Z" }
+  },
+  "limits": {
+    "maximum_requests_per_minute": 100,
+    "maximum_requests_per_hour": 350,
+    "maximum_requests_per_day": 1200,
+    "tokens_per_agent": 200000
+  },
+  "tier": "free",
+  "timestamp": "2026-08-14T19:11:30Z"
+}
+```
+
+Every rate-limited response also includes `X-RateLimit-*` headers — see [Rate limit headers](/docs/resources/rate-limit-headers).
+
+## Handling rate limit errors
+
+When rate limits are exceeded, you receive a **429** response:
+
+```json
+{
+  "detail": "Rate limit exceeded for minute window(s). Upgrade to Premium for increased limits (2,000/min, 10,000/hour, 100,000/day) at https://swarms.world/platform/account for just $99/month."
+}
+```
+
+### Best practices
+
+1. **Monitor usage** — regularly check your rate limits via `/v1/rate/limits`.
+2. **Implement retry logic** — use exponential backoff and the `Retry-After` header when hitting limits.
+3. **Optimize requests** — combine multiple operations into single requests when possible.
+4. **Upgrade when needed** — consider Premium for higher limits.
+
+## Premium tier benefits
+
+Upgrade to Premium for significantly higher limits:
+
+- 20x more requests per minute (2,000 vs 100)
+- ~29x more requests per hour (10,000 vs 350)
+- 83x more requests per day (100,000 vs 1,200)
+- 10x more tokens per agent (2M vs 200K)
+
+Visit [Swarms Platform Account](https://swarms.world/platform/account) to upgrade.
+
+## See also
+
+- [Rate limit headers](/docs/resources/rate-limit-headers)
+- [Rate limits endpoint](/docs/reference/rate-limits)
+- [Premium endpoints](/docs/resources/premium-endpoints)

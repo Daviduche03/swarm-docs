@@ -1,0 +1,73 @@
+# List models (OpenAI-compatible)
+
+List all available models in the standard OpenAI format. Use with any OpenAI SDK
+or client that discovers models via `GET /v1/models`.
+
+## Endpoint
+
+`GET /v1/models`
+
+**Authentication:** Required — `x-api-key` header
+
+## Response
+
+**200** — `ModelListResponse`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `object` | `string` | No | Always `"list"` |
+| `data` | `array[ModelObject]` | Yes | The model catalog, filtered by your subscription tier |
+
+### ModelObject
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | `string` | Yes | The model identifier |
+| `object` | `string` | No | Always `"model"` |
+| `created` | `integer` | No | Creation timestamp (default `0`) |
+| `owned_by` | `string` | No | Always `"swarms"` |
+
+## Example
+
+```bash
+curl -H "x-api-key: $SWARMS_API_KEY" \
+     https://api.swarms.world/v1/models
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    { "id": "gpt-4.1", "object": "model", "created": 0, "owned_by": "swarms" },
+    { "id": "gpt-4.1-mini", "object": "model", "created": 0, "owned_by": "swarms" },
+    { "id": "claude-sonnet-4-20250514", "object": "model", "created": 0, "owned_by": "swarms" }
+  ]
+}
+```
+
+With the OpenAI SDK:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="your-swarms-api-key",
+    base_url="https://api.swarms.world/v1",
+)
+
+models = client.models.list()
+print(f"{len(models.data)} models available")
+for model in models.data[:10]:
+    print(f"{model.id} (owned_by: {model.owned_by})")
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 422 | Validation error |
+
+## See also
+
+- [Available models](/docs/reference/models-available) — Swarms format with a `count` field and richer metadata.

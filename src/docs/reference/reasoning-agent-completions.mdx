@@ -1,0 +1,88 @@
+# Reasoning agent completions
+
+Execute a reasoning agent with advanced cognitive capabilities for complex
+problem-solving tasks.
+
+> **Premium tier required:** This endpoint is available only on Pro, Ultra, and Premium plans. [Upgrade your account](https://swarms.world/platform/account).
+
+## Endpoint
+
+`POST /v1/reasoning-agent/completions`
+
+**Authentication:** Required — `x-api-key` header
+**Rate limiting:** Subject to tier-based rate limits
+
+## Request body — `ReasoningAgentSpec`
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `agent_name` | `string` | No | `reasoning-agent` | Unique name of the reasoning agent |
+| `description` | `string` | No | `A reasoning agent that can answer questions and help with tasks.` | Purpose and capabilities |
+| `model_name` | `string` | No | `claude-sonnet-4-20250514` | AI model the reasoning agent uses |
+| `system_prompt` | `string` | No | — | Initial instruction or context |
+| `max_loops` | `integer` | No | `1` | Maximum number of times the agent may repeat its task |
+| `swarm_type` | `string` | No | `reasoning_duo` | Reasoning architecture: `reasoning-duo`, `self-consistency`, `ire`, `reasoning-agent`, `consistency-agent`, `ire-agent`, `ReflexionAgent`, `GKPAgent`, `AgentJudge` |
+| `num_samples` | `integer` | No | `1` | Number of samples to generate |
+| `output_type` | `string` | No | `dict-all-except-first` | Output format: `list`, `dict`, `string`, `final`, `last`, `json`, `all`, `yaml`, `xml`, `dict-all-except-first`, `str-all-except-first`, `basemodel`, `dict-final`, `list-final` |
+| `num_knowledge_items` | `integer` | No | — | Number of knowledge items to use |
+| `memory_capacity` | `integer` | No | — | Memory capacity for the agent |
+| `task` | `string` | No | — | The task to be completed |
+
+## Response
+
+**200** — `ReasoningAgentCompletionOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job_id` | `string` | Unique identifier for the run |
+| `status` | `string` | Status of the run |
+| `outputs` | `any` | Output generated; shape varies by reasoning type |
+| `timestamp` | `string` | ISO timestamp of the run |
+| `agent_name` | `string` | Name of the agent |
+| `agent_type` | `string` | Type of the agent (swarm type) |
+| `agent_id` | `string` | Unique identifier for the agent instance |
+| `usage` | `object` | Token usage: input, output, and total tokens |
+
+## Example
+
+```bash
+curl -X POST https://api.swarms.world/v1/reasoning-agent/completions \
+  -H "x-api-key: $SWARMS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_name": "math-reasoner",
+    "description": "Mathematical problem solver using dual perspectives",
+    "model_name": "claude-sonnet-4-20250514",
+    "system_prompt": "You are an expert mathematical reasoning agent.",
+    "max_loops": 1,
+    "swarm_type": "reasoning-duo",
+    "task": "Prove that the sum of any three consecutive integers is divisible by 3"
+  }'
+```
+
+```json
+{
+  "job_id": "reasoning-abc123",
+  "status": "success",
+  "outputs": { "final_answer": "For integers n, n+1, n+2, the sum is 3n+3 = 3(n+1), divisible by 3." },
+  "timestamp": "2026-08-14T19:11:02.018760+00:00",
+  "agent_name": "math-reasoner",
+  "agent_type": "reasoning-duo",
+  "agent_id": "agent-xyz789",
+  "usage": { "input_tokens": 500, "output_tokens": 200, "total_tokens": 700 }
+}
+```
+
+## Errors
+
+| Status | Cause |
+|--------|-------|
+| 401 | Missing or invalid API key |
+| 403 | Free tier account (premium endpoint) |
+| 422 | Schema validation failure |
+| 429 | Rate limit exceeded |
+
+## See also
+
+- [Reasoning agent types](/docs/reference/reasoning-agent-types) — list available reasoning architectures.
+- [API architecture](/docs/getting-started/architecture) — the reasoning tier overview.

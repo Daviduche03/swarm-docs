@@ -1,0 +1,31 @@
+# Health check
+
+Verifies that the API service is available and operational.
+
+## Endpoint
+
+`GET /health`
+
+## Authentication
+
+None required — this endpoint is public.
+
+## Response
+
+**200** — `HealthOutput`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `string` | Service status; always `"ok"` |
+
+## Example
+
+```bash
+curl https://api.swarms.world/health
+```
+
+```json
+{
+  "status": "ok"
+}
+```
